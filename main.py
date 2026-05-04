@@ -5,58 +5,12 @@ from __future__ import annotations
 from game.command import CommandRegistry
 from game.engine import GameEngine
 from game.event import Event, EventQueue
-from game.room import Room
 from game.state import GameState
-
-
-# ── world builder ──────────────────────────────────────────────────────────────
-
-def build_rooms() -> dict[str, Room]:
-    """Define the initial map of rooms.
-
-    Stub locations are intentionally sparse; expand each room as content is
-    written.  None exits are present-but-blocked (construction, locked door,
-    etc.).
-    """
-    return {
-        "lobby": Room(
-            room_id="lobby",
-            name="Building Lobby",
-            description=(
-                "The lobby is almost empty. A flickering fluorescent light buzzes overhead. "
-                "Construction noise rumbles from the hallway on the left. "
-                "A detour sign points down a hallway you never noticed before."
-            ),
-            exits={"forward": "hallway_main", "left": None},
-            items={"detour_sign": "a detour sign"},
-        ),
-        "hallway_main": Room(
-            room_id="hallway_main",
-            name="Main Hallway",
-            description=(
-                "A long corridor stretches ahead. Classroom doors line both sides. "
-                "The room numbers make no sense—207, 208, 502, 11."
-            ),
-            exits={"forward": "intersection", "back": "lobby"},
-        ),
-        "intersection": Room(
-            room_id="intersection",
-            name="4-Way Intersection",
-            description=(
-                "Four hallways branch off in every direction. "
-                "Something feels off—like you have stood here before."
-            ),
-            exits={
-                "forward": "hallway_main",
-                "back":    "hallway_main",
-                "left":    "hallway_main",
-                "right":   "hallway_main",
-            },
-        ),
-    }
+from game.world import build_world
 
 
 # ── command builder ────────────────────────────────────────────────────────────
+
 
 def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     """Register all player-facing commands and return the registry.
@@ -113,7 +67,9 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         room = engine.current_room() if engine else None
         if room and target in room.items:
             # Placeholder: room-specific read logic goes here.
-            return f"You read the {room.items[target]}, but the text is hard to make out."
+            return (
+                f"You read the {room.items[target]}, but the text is hard to make out."
+            )
         return f"There is no '{target}' here to read."
 
     registry.register("read", handle_read)
@@ -160,46 +116,58 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
 # ── event builder ──────────────────────────────────────────────────────────────
 
+
 def build_events() -> EventQueue:
     """Register ambient and time-based narrative events."""
     queue = EventQueue()
 
-    queue.register(Event(
-        event_id="time_warning_5min",
-        message="Your phone buzzes. A calendar reminder: exam starts in 5 minutes.",
-        condition=lambda s: 285 < s.time_remaining <= 300,
-    ))
-    queue.register(Event(
-        event_id="time_warning_2min",
-        message=(
-            "You are standing underneath a vent that is blasting cold air. "
-            "Two minutes left."
-        ),
-        condition=lambda s: 105 < s.time_remaining <= 120,
-    ))
-    queue.register(Event(
-        event_id="ominous_footsteps",
-        message="You hear footsteps behind you. When you turn around, no one is there.",
-        condition=lambda s: s.move_count == 5,
-    ))
-    queue.register(Event(
-        event_id="ominous_watched",
-        message="You feel like you're being watched.",
-        condition=lambda s: s.move_count == 10,
-    ))
-    queue.register(Event(
-        event_id="ominous_whisper",
-        message="You hear a whisper, but can't make out the words.",
-        condition=lambda s: s.move_count == 15,
-    ))
+    queue.register(
+        Event(
+            event_id="time_warning_5min",
+            message="Your phone buzzes. A calendar reminder: exam starts in 5 minutes.",
+            condition=lambda s: 285 < s.time_remaining <= 300,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="time_warning_2min",
+            message=(
+                "You are standing underneath a vent that is blasting cold air. "
+                "Two minutes left."
+            ),
+            condition=lambda s: 105 < s.time_remaining <= 120,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="ominous_footsteps",
+            message="You hear footsteps behind you. When you turn around, no one is there.",
+            condition=lambda s: s.move_count == 5,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="ominous_watched",
+            message="You feel like you're being watched.",
+            condition=lambda s: s.move_count == 10,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="ominous_whisper",
+            message="You hear a whisper, but can't make out the words.",
+            condition=lambda s: s.move_count == 15,
+        )
+    )
 
     return queue
 
 
 # ── entry point ────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
-    rooms = build_rooms()
+    rooms = build_world()
     state = GameState(current_room_id="lobby")
     event_queue = build_events()
 
