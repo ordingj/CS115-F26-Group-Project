@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.venv/
+
+# Git internals
+.git/
+
+# Editor / tool artifacts
+.envrc

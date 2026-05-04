@@ -1,0 +1,10 @@
+{
+  // Use the workspace-local prettier install for consistency across machines.
+  "prettier.prettierPath": "./node_modules/prettier",
+
+  // Format markdown files on save with prettier.
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  }
+}

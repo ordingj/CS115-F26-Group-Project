@@ -1,10 +1,8 @@
 # CS115 S26 Group Project
 
+## **Final Exam: Room 314**
+
 Group Members: Joseph Ording, Raj, Jerry, Matthew
-
-Text Adventure (rooms, items, puzzles) — **Final Exam: Room 314**
-
-Theme - Horror | Language - Python
 
 ## How to run
 
@@ -27,4 +25,5 @@ STORY.md         # Full narrative design and puzzle walkthrough
 
 ## Commands
 
-`forward` · `back` · `left` · `right` · `look` · `examine` · `read <item>` · `open <item>` · `knock <item>` · `listen` · `check watch` · `help` · `quit`
+`forward` · `back` · `left` · `right` · `look` · `examine` · `read <item>` · `open <item>` ·
+`knock <item>` · `listen` · `check watch` · `help` · `quit`
