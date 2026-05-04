@@ -32,6 +32,12 @@ FLAVOUR_ROOM_POOL: list[str] = [
 
 
 def _flavour_rooms() -> list[Room]:
+    # All flavour rooms share the same exit structure: forward loops back to
+    # intersection_4way (wrong-way bounce) and back is unset (routing logic may
+    # chain several flavour rooms together via back as well).
+    def _exits() -> dict[str, str | None]:
+        return {"forward": "intersection_4way", "back": None}
+
     return [
         Room(
             room_id="flavour_copy_room",
@@ -42,6 +48,7 @@ def _flavour_rooms() -> list[Room]:
                 "questions. The output tray is already overflowing onto the floor. The "
                 "pages are blank on the side facing up."
             ),
+            exits=_exits(),
         ),
         Room(
             room_id="flavour_faculty_office",
@@ -52,6 +59,7 @@ def _flavour_rooms() -> list[Room]:
                 "papers, a lamp still on, a chair pushed back as if someone just stood "
                 "up. No one is visible. You hear nothing from inside."
             ),
+            exits=_exits(),
         ),
         Room(
             room_id="flavour_study_lounge",
@@ -62,6 +70,7 @@ def _flavour_rooms() -> list[Room]:
                 "you're in isn't on it. The whiteboard reads GOOD LUCK in handwriting "
                 "you almost recognise."
             ),
+            exits=_exits(),
         ),
         Room(
             room_id="flavour_stairwell",
@@ -72,6 +81,7 @@ def _flavour_rooms() -> list[Room]:
                 "ground floor. A flickering exit sign points in no particular "
                 "direction."
             ),
+            exits=_exits(),
         ),
         Room(
             room_id="flavour_classroom_195",
@@ -82,6 +92,7 @@ def _flavour_rooms() -> list[Room]:
                 "the back wall. A single sheet of paper sits on each desk, face-down."
             ),
             items={"paper": "a face-down sheet of paper"},
+            exits=_exits(),
         ),
         Room(
             room_id="flavour_water_fountain",
@@ -91,6 +102,7 @@ def _flavour_rooms() -> list[Room]:
                 "runs rust-brown for a few seconds, then clears. A handwritten note "
                 "taped above it reads: PERFECTLY SAFE."
             ),
+            exits=_exits(),
         ),
     ]
 

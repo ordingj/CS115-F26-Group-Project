@@ -5,6 +5,7 @@ from __future__ import annotations
 from game.command import CommandRegistry
 from game.engine import GameEngine
 from game.event import Event, EventQueue
+from game.puzzle import step1_is_correct, step1_roll
 from game.state import GameState
 from game.world import build_world
 
@@ -34,7 +35,35 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         destination_id = room.exits[verb]
         if destination_id is None:
             return "That way is blocked."
+
+        # ── Step 1: 4-way intersection puzzle ─────────────────────────────────
+        if room.room_id == "intersection_4way":
+            if not step1_is_correct(verb, state):
+                # Wrong way — bounce through a flavour room then back.
+                state.wrong_turns += 1
+                state.set_flag("step1_wrong_way", True)
+                state.current_room_id = destination_id
+                engine.describe_current_room()
+                return (
+                    "\nSomething feels wrong. The hallway ahead looks exactly like "
+                    "one you've already walked. You think you've been here before."
+                )
+            # Correct direction — advance puzzle state.
+            state.puzzle_step = 1
+            state.set_flag("step1_solved", True)
+
         state.current_room_id = destination_id
+
+        # Roll a fresh Step 1 clue any time the player (re-)enters the 4-way.
+        if destination_id == "intersection_4way":
+            step1_roll(state)
+            # Wire the correct exit to the 3-way intersection; others loop back
+            # through flavour rooms (wrong-way logic handles the bounce).
+            correct_dir = state.active_clues["step1_correct_dir"]
+            intersection = engine.rooms["intersection_4way"]
+            for d in ("forward", "left", "right"):
+                intersection.exits[d] = "intersection_3way" if d == correct_dir else "flavour_copy_room"
+
         engine.describe_current_room()
         return ""
 

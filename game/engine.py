@@ -6,6 +6,7 @@ from typing import Optional
 
 from game.command import CommandParser, CommandRegistry
 from game.event import EventQueue
+from game.puzzle import step1_clue_text
 from game.room import Room
 from game.state import GameState
 
@@ -62,9 +63,14 @@ class GameEngine:
             return
         print(f"\n[ {room.name} ]")
         print(room.description)
-        exits = ", ".join(room.exits.keys())
+        # Inject Step 1 clue when player is at the 4-way intersection.
+        if room.room_id == "intersection_4way":
+            clue = step1_clue_text(self.state)
+            if clue:
+                print(f"\n{clue}")
+        exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:
-            print(f"Exits: {exits}")
+            print(f"Exits: {', '.join(exits)}")
         if room.items:
             print(f"You see: {', '.join(room.items.values())}")
         print(f"Time remaining: {self.state.formatted_time()}")
@@ -77,8 +83,8 @@ class GameEngine:
         print("=" * 60)
         print("Your final exam starts in 10 minutes.")
         print("The problem: you can't find the classroom.\n")
-        print('Your teacher\'s voice echoes: "The final will be in Room 314.')
-        print('You really don\'t want to be late."\n')
+        print("Your teacher's voice echoes: \"The final will be in Room 314.")
+        print("You really don't want to be late.\"\n")
 
     def _handle_end(self) -> None:
         if self.state.won:

@@ -1,3 +1,4 @@
+<!-- working-on: Implement puzzle Step 2 – bathroom sink/mirror clue -->
 
 # Project Tasklist
 
@@ -19,8 +20,8 @@
   - [x] flavour hallway pool - 6 atmospheric rooms (`game/world.py::FLAVOUR_ROOM_POOL`);
         routing logic will splice 1-3 between puzzle nodes at runtime
 
-- [ ] Implement puzzle Step 1 – 4-way intersection clue system (randomised each cycle)
-- [ ] Implement puzzle Step 2 – bathroom sink/mirror clue
+- [x] Implement puzzle Step 1 – 4-way intersection clue system (randomised each cycle)
+- [/] Implement puzzle Step 2 – bathroom sink/mirror clue
   - [ ] puzzle mechanics - rinse hands/stop rinsing and timing
 - [ ] Implement puzzle Step 3/4 – janitor song clue
   - [ ] create two song lists for left/right clues with lyrics; randomly select one set
