@@ -1,0 +1,218 @@
+"""Entry point – Final Exam: Room 314."""
+
+from __future__ import annotations
+
+from game.command import CommandRegistry
+from game.engine import GameEngine
+from game.event import Event, EventQueue
+from game.room import Room
+from game.state import GameState
+
+
+# ── world builder ──────────────────────────────────────────────────────────────
+
+def build_rooms() -> dict[str, Room]:
+    """Define the initial map of rooms.
+
+    Stub locations are intentionally sparse; expand each room as content is
+    written.  None exits are present-but-blocked (construction, locked door,
+    etc.).
+    """
+    return {
+        "lobby": Room(
+            room_id="lobby",
+            name="Building Lobby",
+            description=(
+                "The lobby is almost empty. A flickering fluorescent light buzzes overhead. "
+                "Construction noise rumbles from the hallway on the left. "
+                "A detour sign points down a hallway you never noticed before."
+            ),
+            exits={"forward": "hallway_main", "left": None},
+            items={"detour_sign": "a detour sign"},
+        ),
+        "hallway_main": Room(
+            room_id="hallway_main",
+            name="Main Hallway",
+            description=(
+                "A long corridor stretches ahead. Classroom doors line both sides. "
+                "The room numbers make no sense—207, 208, 502, 11."
+            ),
+            exits={"forward": "intersection", "back": "lobby"},
+        ),
+        "intersection": Room(
+            room_id="intersection",
+            name="4-Way Intersection",
+            description=(
+                "Four hallways branch off in every direction. "
+                "Something feels off—like you have stood here before."
+            ),
+            exits={
+                "forward": "hallway_main",
+                "back":    "hallway_main",
+                "left":    "hallway_main",
+                "right":   "hallway_main",
+            },
+        ),
+    }
+
+
+# ── command builder ────────────────────────────────────────────────────────────
+
+def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
+    """Register all player-facing commands and return the registry.
+
+    engine_ref is a one-element list so handlers can reach the live engine
+    without a circular import (the engine is not created until after the
+    registry is built).
+    """
+    registry = CommandRegistry()
+
+    # ── movement ───────────────────────────────────────────────────────────────
+    def handle_move(verb: str, target: str | None, state: GameState) -> str:
+        engine = engine_ref[0]
+        if engine is None:
+            return "Error: engine not initialised."
+        room = engine.current_room()
+        if room is None:
+            return "You are nowhere."
+        if verb not in room.exits:
+            return "You can't go that way."
+        destination_id = room.exits[verb]
+        if destination_id is None:
+            return "That way is blocked."
+        state.current_room_id = destination_id
+        engine.describe_current_room()
+        return ""
+
+    for direction in ("forward", "back", "left", "right"):
+        registry.register(direction, handle_move)
+
+    # ── look / examine ─────────────────────────────────────────────────────────
+    def handle_look(verb: str, target: str | None, state: GameState) -> str:
+        engine = engine_ref[0]
+        if engine:
+            engine.describe_current_room()
+        return ""
+
+    registry.register("look", handle_look)
+    registry.register("examine", handle_look)
+
+    # ── check watch ────────────────────────────────────────────────────────────
+    def handle_check(verb: str, target: str | None, state: GameState) -> str:
+        if target in (None, "watch", "time"):
+            return f"Your watch reads {state.formatted_time()} remaining."
+        return f"You check the {target}, but find nothing useful."
+
+    registry.register("check", handle_check)
+
+    # ── read ───────────────────────────────────────────────────────────────────
+    def handle_read(verb: str, target: str | None, state: GameState) -> str:
+        if target is None:
+            return "Read what?"
+        engine = engine_ref[0]
+        room = engine.current_room() if engine else None
+        if room and target in room.items:
+            # Placeholder: room-specific read logic goes here.
+            return f"You read the {room.items[target]}, but the text is hard to make out."
+        return f"There is no '{target}' here to read."
+
+    registry.register("read", handle_read)
+
+    # ── open ───────────────────────────────────────────────────────────────────
+    def handle_open(verb: str, target: str | None, state: GameState) -> str:
+        if target is None:
+            return "Open what?"
+        return f"You try to open the {target}, but it won't budge."
+
+    registry.register("open", handle_open)
+
+    # ── knock ──────────────────────────────────────────────────────────────────
+    def handle_knock(verb: str, target: str | None, state: GameState) -> str:
+        if target is None:
+            return "Knock on what?"
+        return f"You knock on the {target}. No answer."
+
+    registry.register("knock", handle_knock)
+
+    # ── listen ─────────────────────────────────────────────────────────────────
+    def handle_listen(verb: str, target: str | None, state: GameState) -> str:
+        return "You listen carefully. The building hums with an uneasy silence."
+
+    registry.register("listen", handle_listen)
+
+    # ── help ───────────────────────────────────────────────────────────────────
+    def handle_help(verb: str, target: str | None, state: GameState) -> str:
+        engine = engine_ref[0]
+        verbs = engine.registry.known_verbs() if engine else []
+        return "Commands: " + ", ".join(verbs)
+
+    registry.register("help", handle_help)
+
+    # ── quit ───────────────────────────────────────────────────────────────────
+    def handle_quit(verb: str, target: str | None, state: GameState) -> str:
+        state.game_over = True
+        return "You give up and head home. Game over."
+
+    registry.register("quit", handle_quit)
+
+    return registry
+
+
+# ── event builder ──────────────────────────────────────────────────────────────
+
+def build_events() -> EventQueue:
+    """Register ambient and time-based narrative events."""
+    queue = EventQueue()
+
+    queue.register(Event(
+        event_id="time_warning_5min",
+        message="Your phone buzzes. A calendar reminder: exam starts in 5 minutes.",
+        condition=lambda s: 285 < s.time_remaining <= 300,
+    ))
+    queue.register(Event(
+        event_id="time_warning_2min",
+        message=(
+            "You are standing underneath a vent that is blasting cold air. "
+            "Two minutes left."
+        ),
+        condition=lambda s: 105 < s.time_remaining <= 120,
+    ))
+    queue.register(Event(
+        event_id="ominous_footsteps",
+        message="You hear footsteps behind you. When you turn around, no one is there.",
+        condition=lambda s: s.move_count == 5,
+    ))
+    queue.register(Event(
+        event_id="ominous_watched",
+        message="You feel like you're being watched.",
+        condition=lambda s: s.move_count == 10,
+    ))
+    queue.register(Event(
+        event_id="ominous_whisper",
+        message="You hear a whisper, but can't make out the words.",
+        condition=lambda s: s.move_count == 15,
+    ))
+
+    return queue
+
+
+# ── entry point ────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    rooms = build_rooms()
+    state = GameState(current_room_id="lobby")
+    event_queue = build_events()
+
+    # One-element list gives command handlers a mutable reference to the engine
+    # without a circular dependency.
+    engine_ref: list[GameEngine | None] = [None]
+    registry = build_commands(engine_ref)
+
+    engine = GameEngine(rooms, state, registry, event_queue)
+    engine_ref[0] = engine
+
+    engine.run()
+
+
+if __name__ == "__main__":
+    main()
