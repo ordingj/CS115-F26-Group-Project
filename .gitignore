@@ -1,3 +1,6 @@
 .github
 .envrc
 .venv
+__pycache__/
+*.pyc
+*.pyo
