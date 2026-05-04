@@ -7,9 +7,11 @@
   and re-roll a fresh clue on return. Also stubbed Step 2 (`step2_roll`/`step2_mirror_text`)
   and Step 3/4 (`step3_roll`/`step3_chorus_text`, with 10-song left/right pools) in
   `game/puzzle.py` for upcoming tasks.
-- Updated flavour rooms in `game/world.py` with `forward → intersection_4way` exit for
-  wrong-way bounce routing.
-- `GameEngine.describe_current_room` now filters `None` exits from displayed exits list.
+- Implemented puzzle Step 2 – bathroom sink/mirror clue: `wash`/`use` command triggers
+  sink interaction (water off → soap → rinse); `examine mirror` / `read mirror` reveal
+  backwards clue (GO LEFT or GO RIGHT, randomised per game); mirror only readable after
+  washing hands. `examine sink` shows sink status. Engine shows sink-running hint on room
+  entry. Bathroom exit wires 3-way exits from mirror direction.
 
 - Configured Prettier for Markdown autoformat on save: `.prettierrc` (printWidth 95, proseWrap
   always), `.prettierignore` (excludes node_modules, pycache, venv, etc.),

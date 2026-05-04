@@ -1,4 +1,4 @@
-<!-- working-on: Implement puzzle Step 2 – bathroom sink/mirror clue -->
+<!-- working-on: Implement puzzle Step 3/4 – janitor song clue -->
 
 # Project Tasklist
 
@@ -21,10 +21,10 @@
         routing logic will splice 1-3 between puzzle nodes at runtime
 
 - [x] Implement puzzle Step 1 – 4-way intersection clue system (randomised each cycle)
-- [/] Implement puzzle Step 2 – bathroom sink/mirror clue
-  - [ ] puzzle mechanics - rinse hands/stop rinsing and timing
-- [ ] Implement puzzle Step 3/4 – janitor song clue
-  - [ ] create two song lists for left/right clues with lyrics; randomly select one set
+- [x] Implement puzzle Step 2 – bathroom sink/mirror clue
+  - [x] puzzle mechanics - rinse hands/stop rinsing and timing
+- [/] Implement puzzle Step 3/4 – janitor song clue
+  - [x] create two song lists for left/right clues with lyrics; randomly select one set
         (song/lyrics) for each encounter
 - [ ] Implement "wrong way" reset - if player goes wrong way, give them a few random rooms and
       then return them to the 4-way with new clue; reset the puzzle states/randomise the clues

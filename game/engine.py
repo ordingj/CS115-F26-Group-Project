@@ -68,6 +68,12 @@ class GameEngine:
             clue = step1_clue_text(self.state)
             if clue:
                 print(f"\n{clue}")
+        # Show sink status in bathroom.
+        elif room.room_id == "bathroom":
+            if room.attributes.get("sink_running", False):
+                print("\nThe motion-sensor sink is running. (Try: WASH HANDS)")
+            elif self.state.has_flag("step2_hands_washed"):
+                print("\nThe sink is off. Your hands are clean.")
         exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:
             print(f"Exits: {', '.join(exits)}")

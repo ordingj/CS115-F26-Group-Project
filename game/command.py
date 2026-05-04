@@ -12,10 +12,20 @@ if TYPE_CHECKING:
 
 MOVEMENT_VERBS: frozenset[str] = frozenset({"forward", "back", "left", "right"})
 
-ACTION_VERBS: frozenset[str] = frozenset({
-    "look", "examine", "read", "open", "knock",
-    "listen", "wash", "check", "help", "quit",
-})
+ACTION_VERBS: frozenset[str] = frozenset(
+    {
+        "look",
+        "examine",
+        "read",
+        "open",
+        "knock",
+        "listen",
+        "wash",
+        "check",
+        "help",
+        "quit",
+    }
+)
 
 # Handler: (verb, target, state) -> message string shown to the player.
 CommandHandler = Callable[[str, Optional[str], "GameState"], str]

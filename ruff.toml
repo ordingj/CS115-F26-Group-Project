@@ -1,0 +1,8 @@
+exclude = [
+  ".git",
+  ".github",
+  ".mypy_cache",
+  ".ruff_cache",
+  ".venv",
+  "node_modules",
+]

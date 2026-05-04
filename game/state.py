@@ -26,8 +26,8 @@ class GameState:
     current_room_id: str
 
     # ── time ──────────────────────────────────────────────────────────────────
-    time_remaining: int = 600           # 10 minutes in seconds
-    seconds_per_action: int = 15        # cost per player command
+    time_remaining: int = 600  # 10 minutes in seconds
+    seconds_per_action: int = 15  # cost per player command
 
     # ── puzzle progression ────────────────────────────────────────────────────
     puzzle_step: int = 0

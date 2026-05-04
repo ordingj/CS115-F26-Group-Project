@@ -1,6 +1,4 @@
-# CS115 S26 Group Project
-
-## **Final Exam: Room 314**
+# CS115 S26 Group Project - **Final Exam: Room 314**
 
 Group Members: Joseph Ording, Raj, Jerry, Matthew
 

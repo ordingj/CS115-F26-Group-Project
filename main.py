@@ -5,7 +5,7 @@ from __future__ import annotations
 from game.command import CommandRegistry
 from game.engine import GameEngine
 from game.event import Event, EventQueue
-from game.puzzle import step1_is_correct, step1_roll
+from game.puzzle import step1_is_correct, step1_roll, step2_mirror_text, step2_roll, step3_roll
 from game.state import GameState
 from game.world import build_world
 
@@ -64,6 +64,29 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             for d in ("forward", "left", "right"):
                 intersection.exits[d] = "intersection_3way" if d == correct_dir else "flavour_copy_room"
 
+        # Bathroom entry: roll Step 2 mirror direction, start sink running.
+        elif destination_id == "bathroom":
+            if not state.has_flag("step2_rolled"):
+                step2_roll(state)
+                state.set_flag("step2_rolled")
+            bathroom = engine.rooms["bathroom"]
+            bathroom.attributes["sink_running"] = True
+
+        # Exiting bathroom back to 3-way (exit node): wire exits from mirror clue.
+        elif destination_id == "intersection_3way_exit":
+            mirror_dir = state.active_clues.get("step2_mirror_dir", "")
+            exit_node = engine.rooms["intersection_3way_exit"]
+            # The mirror clue direction leads toward the janitor hallway.
+            # The wrong directions loop back through flavour rooms.
+            for d in ("forward", "left", "right"):
+                exit_node.exits[d] = "hallway_janitor" if d == mirror_dir else "flavour_copy_room"
+
+        # Janitor hallway entry: roll Step 3 song clue on first visit.
+        elif destination_id == "hallway_janitor":
+            if not state.has_flag("step3_rolled"):
+                step3_roll(state)
+                state.set_flag("step3_rolled")
+
         engine.describe_current_room()
         return ""
 
@@ -73,8 +96,29 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     # ── look / examine ─────────────────────────────────────────────────────────
     def handle_look(verb: str, target: str | None, state: GameState) -> str:
         engine = engine_ref[0]
-        if engine:
-            engine.describe_current_room()
+        if engine is None:
+            return ""
+        # Targeted examine: specific items before falling back to full room description.
+        if target == "mirror":
+            room = engine.current_room()
+            if room and room.room_id == "bathroom":
+                if not state.has_flag("step2_hands_washed"):
+                    return (
+                        "The mirror is fogged from the motion-sensor sinks. You can "
+                        "barely see your own reflection."
+                    )
+                return step2_mirror_text(state)
+        if target == "sink":
+            room = engine.current_room()
+            if room and room.room_id == "bathroom":
+                running = room.attributes.get("sink_running", False)
+                if running:
+                    return (
+                        "A motion-sensor sink. The water is running — the sensor must "
+                        "have triggered when you walked in. Try: WASH HANDS."
+                    )
+                return "The sink faucet is off. The motion sensor blinks green."
+        engine.describe_current_room()
         return ""
 
     registry.register("look", handle_look)
@@ -94,14 +138,18 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             return "Read what?"
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
-        if room and target in room.items:
-            # Placeholder: room-specific read logic goes here.
-            return (
-                f"You read the {room.items[target]}, but the text is hard to make out."
-            )
+        if room is None:
+            return f"There is no '{target}' here to read."
+        # Room-specific readable items.
+        if room.room_id == "lobby" and target == "detour_sign":
+            return "The sign reads: DETOUR → (an arrow points down the forward hallway)."
+        if room.room_id == "bathroom" and target == "mirror":
+            if not state.has_flag("step2_hands_washed"):
+                return "The mirror is too fogged to read anything on it."
+            return step2_mirror_text(state)
+        if target in room.items:
+            return f"You read the {room.items[target]}, but the text is hard to make out."
         return f"There is no '{target}' here to read."
-
-    registry.register("read", handle_read)
 
     # ── open ───────────────────────────────────────────────────────────────────
     def handle_open(verb: str, target: str | None, state: GameState) -> str:
@@ -119,8 +167,52 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     registry.register("knock", handle_knock)
 
-    # ── listen ─────────────────────────────────────────────────────────────────
+    # ── wash / use sink ───────────────────────────────────────────
+    def handle_wash(verb: str, target: str | None, state: GameState) -> str:
+        engine = engine_ref[0]
+        room = engine.current_room() if engine else None
+        if room is None or room.room_id != "bathroom":
+            return "There\'s nothing to wash here."
+        if state.has_flag("step2_hands_washed"):
+            return "Your hands are already clean."
+        running = room.attributes.get("sink_running", False)
+        if not running:
+            return (
+                "The sink isn\'t running. You wave your hand in front of the motion "
+                "sensor but it doesn\'t respond. Maybe try again."
+            )
+        # Washing hands: sink stops when hands go under, stays off after rinse.
+        room.attributes["sink_running"] = False
+        room.attributes["hands_rinsed"] = True
+        state.set_flag("step2_hands_washed")
+        state.set_flag("step2_mirror_clue_visible")
+        return (
+            "You hold your hands under the faucet. The water shuts off as soon as "
+            "your hands break the sensor beam — then comes back on. You soap up, "
+            "rinse, and step back. The water stops again. Your hands are clean. "
+            "The mirror above the sink has cleared a little. You should look at it."
+        )
+
+    registry.register("wash", handle_wash)
+    registry.register("use", handle_wash)
+
+    # ── listen ──────────────────────────────────────────────────────
     def handle_listen(verb: str, target: str | None, state: GameState) -> str:
+        engine = engine_ref[0]
+        room = engine.current_room() if engine else None
+        if room and room.room_id == "hallway_janitor":
+            chorus = state.active_clues.get("step3_song_chorus", "")
+            if not chorus:
+                # Step 3 hasn\'t been rolled yet — roll now on first listen.
+
+                step3_roll(state)
+                chorus = state.active_clues.get("step3_song_chorus", "")
+                room.attributes["song_heard"] = True
+                state.set_flag("step3_song_heard")
+            return (
+                "The janitor is humming. You catch a few bars of the chorus: "
+                f"\n  \"{chorus}\""
+            )
         return "You listen carefully. The building hums with an uneasy silence."
 
     registry.register("listen", handle_listen)
