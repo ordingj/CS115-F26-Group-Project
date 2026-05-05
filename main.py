@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+
 from game.command import CommandRegistry
 from game.engine import GameEngine
 from game.event import Event, EventQueue
@@ -14,7 +16,7 @@ from game.puzzle import (
     step3_roll,
 )
 from game.state import GameState
-from game.world import build_world
+from game.world import FLAVOUR_ROOM_POOL, build_world
 
 
 # ── command builder ────────────────────────────────────────────────────────────
@@ -82,12 +84,18 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         # Roll a fresh Step 1 clue any time the player (re-)enters the 4-way.
         if destination_id == "intersection_4way":
             step1_roll(state)
-            # Wire the correct exit to the 3-way intersection; others loop back
-            # through flavour rooms (wrong-way logic handles the bounce).
             correct_dir = state.active_clues["step1_correct_dir"]
             intersection = engine.rooms["intersection_4way"]
+            # Build a 2–3 room wrong-way chain from the flavour pool so lost
+            # players traverse several atmospheric rooms before looping back.
+            chain_len = random.randint(2, 3)
+            chain = random.sample(FLAVOUR_ROOM_POOL, chain_len)
+            for i, room_id in enumerate(chain):
+                next_id = chain[i + 1] if i + 1 < chain_len else "intersection_4way"
+                engine.rooms[room_id].exits["forward"] = next_id
+            # Correct direction → 3-way intersection; wrong → start of chain.
             for d in ("forward", "left", "right"):
-                intersection.exits[d] = "intersection_3way" if d == correct_dir else "flavour_copy_room"
+                intersection.exits[d] = "intersection_3way" if d == correct_dir else chain[0]
 
         # Bathroom entry: roll Step 2 mirror direction, start sink running.
         elif destination_id == "bathroom":

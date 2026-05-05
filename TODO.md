@@ -27,7 +27,7 @@
   - [x] create two song lists for left/right clues with lyrics; randomly select one set
         (song/lyrics) for each encounter
 - [/] Implement "wrong way" reset - if player goes wrong way, give them a few random rooms and
-      then return them to the 4-way with new clue; reset the puzzle states/randomise the clues
+  then return them to the 4-way with new clue; reset the puzzle states/randomise the clues
 - [ ] events - add ambient narrative events that trigger based on time/location/state to add
       tension and foreshadowing (e.g. footsteps, whispers, flickering lights, etc.)
 - [ ] Add win condition – enter Room 314 before time runs out
