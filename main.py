@@ -5,7 +5,14 @@ from __future__ import annotations
 from game.command import CommandRegistry
 from game.engine import GameEngine
 from game.event import Event, EventQueue
-from game.puzzle import step1_is_correct, step1_roll, step2_mirror_text, step2_roll, step3_roll
+from game.puzzle import (
+    step1_is_correct,
+    step1_roll,
+    step2_mirror_text,
+    step2_roll,
+    step3_is_correct,
+    step3_roll,
+)
 from game.state import GameState
 from game.world import build_world
 
@@ -52,6 +59,24 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             state.puzzle_step = 1
             state.set_flag("step1_solved", True)
 
+        # ── Step 3: janitor hallway puzzle ────────────────────────────────────
+        elif room.room_id == "hallway_janitor" and verb in ("forward", "left", "right"):
+            if not step3_is_correct(verb, state):
+                # Wrong way — bounce through a flavour room. The flavour room's
+                # forward exit is pointed back to hallway_janitor (set on entry),
+                # so the player can try again without a re-roll.
+                state.wrong_turns += 1
+                state.current_room_id = destination_id
+                engine.describe_current_room()
+                return (
+                    "\nThe hallway curves unexpectedly. After a few steps you "
+                    "recognise the tiles — you've looped back. The janitor is "
+                    "still mopping."
+                )
+            # Correct direction — advance past the janitor.
+            state.puzzle_step = 3
+            state.set_flag("step3_solved")
+
         state.current_room_id = destination_id
 
         # Roll a fresh Step 1 clue any time the player (re-)enters the 4-way.
@@ -81,11 +106,19 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             for d in ("forward", "left", "right"):
                 exit_node.exits[d] = "hallway_janitor" if d == mirror_dir else "flavour_copy_room"
 
-        # Janitor hallway entry: roll Step 3 song clue on first visit.
+        # Janitor hallway entry: roll Step 3 song clue on first visit;
+        # wire exits and redirect the shared flavour room's forward exit back
+        # here so wrong-way bounces return to the janitor (not the 4-way).
         elif destination_id == "hallway_janitor":
             if not state.has_flag("step3_rolled"):
                 step3_roll(state)
                 state.set_flag("step3_rolled")
+            correct_dir = state.active_clues["step3_correct_dir"]
+            janitor = engine.rooms["hallway_janitor"]
+            for d in ("forward", "left", "right"):
+                janitor.exits[d] = "hallway_final" if d == correct_dir else "flavour_copy_room"
+            # Redirect wrong-way bounce destination back to janitor hallway.
+            engine.rooms["flavour_copy_room"].exits["forward"] = "hallway_janitor"
 
         engine.describe_current_room()
         return ""
@@ -258,12 +291,12 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         if room and room.room_id == "hallway_janitor":
             chorus = state.active_clues.get("step3_song_chorus", "")
             if not chorus:
-                # Step 3 hasn\'t been rolled yet — roll now on first listen.
-
+                # Fallback: roll now if entry handler somehow didn't fire.
                 step3_roll(state)
                 chorus = state.active_clues.get("step3_song_chorus", "")
-                room.attributes["song_heard"] = True
-                state.set_flag("step3_song_heard")
+            # Mark song as heard regardless of whether it was freshly rolled.
+            room.attributes["song_heard"] = True
+            state.set_flag("step3_song_heard")
             return (
                 "The janitor is humming. You catch a few bars of the chorus: "
                 f"\n  \"{chorus}\""

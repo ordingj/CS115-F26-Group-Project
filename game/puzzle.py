@@ -156,3 +156,8 @@ def step3_roll(state: GameState) -> None:
 def step3_chorus_text(state: GameState) -> str:
     """Return the chorus line the janitor is humming."""
     return state.active_clues.get("step3_song_chorus", "")
+
+
+def step3_is_correct(direction: str, state: GameState) -> bool:
+    """Return True if *direction* matches the current Step 3 correct direction."""
+    return direction == state.active_clues.get("step3_correct_dir", "")

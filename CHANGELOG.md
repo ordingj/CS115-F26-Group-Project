@@ -1,17 +1,15 @@
 ## 2026-05-04
 
-- Implemented puzzle Step 1 – 4-way intersection clue system (`game/puzzle.py`): three
-  randomised clue types (flickering light, bake-sale sign, shadow); correct direction stored in
-  `state.active_clues["step1_correct_dir"]`; clue text injected into room description by
-  `GameEngine`; wrong-way moves bounce through a flavour room and re-roll a fresh clue on
-  return. Also stubbed Step 2 (`step2_roll`/`step2_mirror_text`) and Step 3/4
-  (`step3_roll`/`step3_chorus_text`, with 10-song left/right pools) in `game/puzzle.py` for
-  upcoming tasks.
-- Implemented puzzle Step 2 – bathroom sink/mirror clue: `wash`/`use` command triggers sink
-  interaction (water off → soap → rinse); `examine mirror` / `read mirror` reveal backwards
-  clue (GO LEFT or GO RIGHT, randomised per game); mirror only readable after washing hands.
-  `examine sink` shows sink status. Engine shows sink-running hint on room entry. Bathroom exit
-  wires 3-way exits from mirror direction.
+- Implemented puzzle Step 3/4 – janitor song clue: `step3_is_correct` helper added to
+  `game/puzzle.py`; `hallway_janitor` gains left/right/forward exits (puzzle-gated); exits
+  wired on entry — correct direction (from song) leads to `hallway_final`, wrong directions
+  bounce through `flavour_copy_room` (whose `forward` exit is redirected to `hallway_janitor`
+  so wrong-way bounces loop back without re-rolling the clue); `LISTEN` in janitor hallway
+  returns the song chorus and sets `step3_song_heard` flag.
+- Redesigned handwashing puzzle as 4-phase motion-sensor trick: phase 0–4 state machine in
+  `room.attributes["wash_phase"]`; `RINSE HANDS` and `STOP` commands advance phases; trick is
+  RINSE → STOP (resets sensor) → RINSE quickly (water stays running) → STOP (done); engine
+  shows phase-appropriate sink hint; `examine sink` shows context-sensitive status.
 
 - Configured Prettier for Markdown autoformat on save: `.prettierrc` (printWidth 95, proseWrap
   always), `.prettierignore` (excludes node_modules, pycache, venv, etc.),

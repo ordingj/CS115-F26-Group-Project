@@ -1,4 +1,4 @@
-<!-- working-on: Implement puzzle Step 3/4 – janitor song clue -->
+<!-- working-on: Implement "wrong way" reset -->
 
 # Project Tasklist
 
@@ -23,10 +23,10 @@
 - [x] Implement puzzle Step 1 – 4-way intersection clue system (randomised each cycle)
 - [x] Implement puzzle Step 2 – bathroom sink/mirror clue
   - [x] puzzle mechanics - rinse hands/stop rinsing and timing
-- [/] Implement puzzle Step 3/4 – janitor song clue
+- [x] Implement puzzle Step 3/4 – janitor song clue
   - [x] create two song lists for left/right clues with lyrics; randomly select one set
         (song/lyrics) for each encounter
-- [ ] Implement "wrong way" reset - if player goes wrong way, give them a few random rooms and
+- [/] Implement "wrong way" reset - if player goes wrong way, give them a few random rooms and
       then return them to the 4-way with new clue; reset the puzzle states/randomise the clues
 - [ ] events - add ambient narrative events that trigger based on time/location/state to add
       tension and foreshadowing (e.g. footsteps, whispers, flickering lights, etc.)

@@ -217,7 +217,7 @@ def _structural_rooms() -> list[Room]:
                 "floor, earbuds in, humming something to himself. He hasn't noticed "
                 "you, or doesn't care."
             ),
-            exits={"back": "intersection_3way_exit", "forward": None},
+            exits={"back": "intersection_3way_exit", "left": None, "right": None, "forward": None},
             attributes={
                 "is_puzzle_node": True,
                 "puzzle_step": 4,
