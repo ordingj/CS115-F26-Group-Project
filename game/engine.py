@@ -70,10 +70,24 @@ class GameEngine:
                 print(f"\n{clue}")
         # Show sink status in bathroom.
         elif room.room_id == "bathroom":
-            if room.attributes.get("sink_running", False):
-                print("\nThe motion-sensor sink is running. (Try: WASH HANDS)")
-            elif self.state.has_flag("step2_hands_washed"):
+            phase = room.attributes.get("wash_phase", 0)
+            running = room.attributes.get("sink_running", False)
+            if self.state.has_flag("step2_hands_washed"):
                 print("\nThe sink is off. Your hands are clean.")
+            elif running and phase == 0:
+                print("\nThe motion-sensor sink is running. (Try: RINSE HANDS)")
+            elif not running and phase == 1:
+                print(
+                    "\nThe water cut off. Your hands are still soapy. "
+                    "(Try: STOP to pull your hands back)"
+                )
+            elif running and phase == 2:
+                print(
+                    "\nThe water came back on. Quick — rinse again before it cuts off. "
+                    "(Try: RINSE HANDS)"
+                )
+            elif running and phase == 3:
+                print("\nThe water is still running. Your hands are clean. (Try: STOP)")
         exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:
             print(f"Exits: {', '.join(exits)}")

@@ -111,13 +111,20 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         if target == "sink":
             room = engine.current_room()
             if room and room.room_id == "bathroom":
+                phase = room.attributes.get("wash_phase", 0)
                 running = room.attributes.get("sink_running", False)
+                if state.has_flag("step2_hands_washed"):
+                    return "The sink is off. Your hands are already clean."
                 if running:
+                    hint = "rinse hands" if phase in (0, 2) else "stop"
                     return (
-                        "A motion-sensor sink. The water is running — the sensor must "
-                        "have triggered when you walked in. Try: WASH HANDS."
+                        f"A motion-sensor sink. The water is running. "
+                        f"(Try: {hint.upper()})"
                     )
-                return "The sink faucet is off. The motion sensor blinks green."
+                return (
+                    "The sink is off. The motion sensor blinks. "
+                    "(Try: STOP to pull your hands back)"
+                )
         engine.describe_current_room()
         return ""
 
@@ -167,34 +174,82 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     registry.register("knock", handle_knock)
 
-    # ── wash / use sink ───────────────────────────────────────────
-    def handle_wash(verb: str, target: str | None, state: GameState) -> str:
+    # ── rinse / wash ──────────────────────────────────────────────────────────
+    # Handwashing puzzle — phase state lives in room.attributes["wash_phase"]:
+    #   0  sink running, hands out        → 'rinse hands' to start
+    #   1  sink off, hands soapy          → 'stop' to pull hands back
+    #   2  sink running again, hands out  → 'rinse hands' quickly to finish
+    #   3  hands clean, sink running      → 'stop' to finish
+    #   4  done, sink off, hands clean
+    def handle_rinse(verb: str, target: str | None, state: GameState) -> str:
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room is None or room.room_id != "bathroom":
-            return "There\'s nothing to wash here."
+            return "There's nothing to rinse here."
         if state.has_flag("step2_hands_washed"):
             return "Your hands are already clean."
-        running = room.attributes.get("sink_running", False)
-        if not running:
+        phase = room.attributes.get("wash_phase", 0)
+        if phase == 0:
+            # First attempt: water stops as soon as hands break the beam.
+            room.attributes["wash_phase"] = 1
+            room.attributes["sink_running"] = False
             return (
-                "The sink isn\'t running. You wave your hand in front of the motion "
-                "sensor but it doesn\'t respond. Maybe try again."
+                "You hold your hands under the faucet. The water runs over them "
+                "for a moment... then cuts off. Your hands are sudsy but the sensor "
+                "timed out before you could rinse. Try 'stop' to let the sensor reset."
             )
-        # Washing hands: sink stops when hands go under, stays off after rinse.
-        room.attributes["sink_running"] = False
-        room.attributes["hands_rinsed"] = True
-        state.set_flag("step2_hands_washed")
-        state.set_flag("step2_mirror_clue_visible")
-        return (
-            "You hold your hands under the faucet. The water shuts off as soon as "
-            "your hands break the sensor beam — then comes back on. You soap up, "
-            "rinse, and step back. The water stops again. Your hands are clean. "
-            "The mirror above the sink has cleared a little. You should look at it."
-        )
+        if phase == 2:
+            # Trick: quick enough after 'stop' — water stays running this time.
+            room.attributes["wash_phase"] = 3
+            return (
+                "You put your hands back under quickly. This time the water stays "
+                "running long enough to rinse the soap off. Your hands are clean. "
+                "Type 'stop' to take your hands away."
+            )
+        if phase == 1:
+            return (
+                "The water is off. Pull your hands back first — try 'stop' to let "
+                "the motion sensor reset."
+            )
+        return "Your hands are already rinsed. Type 'stop' to finish."
 
-    registry.register("wash", handle_wash)
-    registry.register("use", handle_wash)
+    registry.register("rinse", handle_rinse)
+    registry.register("wash", handle_rinse)
+
+    # ── stop (take hands away from sink) ──────────────────────────────────────
+    def handle_stop(verb: str, target: str | None, state: GameState) -> str:
+        engine = engine_ref[0]
+        room = engine.current_room() if engine else None
+        if room is None or room.room_id != "bathroom":
+            return "There's nothing to stop here."
+        if state.has_flag("step2_hands_washed"):
+            return "The sink is already off. Your hands are clean."
+        phase = room.attributes.get("wash_phase", 0)
+        if phase == 1:
+            # Pull hands away after first rinse — sensor detects empty space,
+            # water comes back on.
+            room.attributes["wash_phase"] = 2
+            room.attributes["sink_running"] = True
+            return (
+                "You pull your hands back. A moment passes... the sensor detects "
+                "the empty basin and the water comes back on. Quick — rinse hands again."
+            )
+        if phase == 3:
+            # Final stop after successful rinse — hands are clean.
+            room.attributes["wash_phase"] = 4
+            room.attributes["sink_running"] = False
+            state.set_flag("step2_hands_washed")
+            state.set_flag("step2_mirror_clue_visible")
+            return (
+                "You take your hands away. The water shuts off. Your hands are "
+                "clean. The steam on the mirror has cleared a little. "
+                "You should look at it."
+            )
+        if phase == 0:
+            return "You step back from the sink. The water keeps running."
+        return "You step back from the sink."
+
+    registry.register("stop", handle_stop)
 
     # ── listen ──────────────────────────────────────────────────────
     def handle_listen(verb: str, target: str | None, state: GameState) -> str:
