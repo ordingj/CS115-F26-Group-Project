@@ -1,10 +1,19 @@
 ## 2026-05-05
 
-- Implemented wrong-way reset: on an incorrect direction at `intersection_4way`, the player
-  is routed through a randomly-sampled chain of 2–3 flavour rooms (from `FLAVOUR_ROOM_POOL`)
-  before looping back to the 4-way intersection; Step 1 clue is re-rolled on every re-entry
-  (`step1_roll` was already called on entry), giving a genuinely fresh puzzle each time the
-  player is lost. Added `import random` and `FLAVOUR_ROOM_POOL` import to `main.py`.
+- Added win/lose/weird endings: entering `room_314` sets `state.won = True` and
+  `state.game_over = True` (`main.py`); `engine._handle_end()` now has three branches —
+  weird ending (won with ≥300 s remaining: empty room, exam is tomorrow), normal win,
+  and time-out lose. Lose condition was already implicit in `GameState.tick()`.
+- Added ambient narrative events (10 new one-shot events in `build_events()`, `main.py`):
+  location-based (lobby ceiling tiles, hallway no signal, intersection door numbers after a
+  wrong turn, bathroom stall click, janitor mopping the same spot); move-count tension
+  escalation (door closes at move 3, footsteps stop at 8, light buzzes at 13, marker smell at
+  20); additional 3-minute time warning (165–180 s remaining).- Implemented wrong-way reset: on
+  an incorrect direction at `intersection_4way`, the player is routed through a
+  randomly-sampled chain of 2–3 flavour rooms (from `FLAVOUR_ROOM_POOL`) before looping back to
+  the 4-way intersection; Step 1 clue is re-rolled on every re-entry (`step1_roll` was already
+  called on entry), giving a genuinely fresh puzzle each time the player is lost. Added
+  `import random` and `FLAVOUR_ROOM_POOL` import to `main.py`.
 
 ## 2026-05-04
 

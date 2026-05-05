@@ -1,4 +1,4 @@
-<!-- working-on: events - add ambient narrative events -->
+<!-- working-on: implement curses-based UI -->
 
 # Project Tasklist
 
@@ -27,13 +27,13 @@
   - [x] create two song lists for left/right clues with lyrics; randomly select one set
         (song/lyrics) for each encounter
 - [x] Implement "wrong way" reset - if player goes wrong way, give them a few random rooms and
-  then return them to the 4-way with new clue; reset the puzzle states/randomise the clues
-- [/] events - add ambient narrative events that trigger based on time/location/state to add
+      then return them to the 4-way with new clue; reset the puzzle states/randomise the clues
+- [x] events - add ambient narrative events that trigger based on time/location/state to add
       tension and foreshadowing (e.g. footsteps, whispers, flickering lights, etc.)
-- [ ] Add win condition – enter Room 314 before time runs out
-- [ ] Add lose condition – time runs out before entering Room 314
-- [ ] Add weird ending – arrive in Room 314 with at least 5 minutes remaining
+- [x] Add win condition – enter Room 314 before time runs out
+- [x] Add lose condition – time runs out before entering Room 314
+- [x] Add weird ending – arrive in Room 314 with at least 5 minutes remaining
 
-- [ ] implement curses-based UI with live-updating room descriptions, command input, and event
+- [/] implement curses-based UI with live-updating room descriptions, command input, and event
       notifications
   - [ ] upper section for room description, lower section with command input and event log

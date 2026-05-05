@@ -107,7 +107,14 @@ class GameEngine:
         print("You really don't want to be late.\"\n")
 
     def _handle_end(self) -> None:
-        if self.state.won:
+        if self.state.won and self.state.time_remaining >= 300:
+            print("\n" + "=" * 60)
+            print("  YOU MADE IT TO ROOM 314. FIVE MINUTES EARLY.")
+            print("  The room is empty. The desks are empty. The exam")
+            print("  schedule on the door says the final isn't until")
+            print("  TOMORROW. You sit down anyway. You are very tired.")
+            print("=" * 60)
+        elif self.state.won:
             print("\n" + "=" * 60)
             print("  YOU MADE IT TO ROOM 314!")
             print("  The exam is already in progress, but you're here.")

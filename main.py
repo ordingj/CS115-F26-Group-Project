@@ -128,6 +128,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             # Redirect wrong-way bounce destination back to janitor hallway.
             engine.rooms["flavour_copy_room"].exits["forward"] = "hallway_janitor"
 
+        # Win condition: arriving at Room 314 ends the game as a win.
+        elif destination_id == "room_314":
+            state.won = True
+            state.game_over = True
+
         engine.describe_current_room()
         return ""
 
