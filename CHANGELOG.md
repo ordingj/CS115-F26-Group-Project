@@ -1,3 +1,11 @@
+## 2026-05-05
+
+- Implemented wrong-way reset: on an incorrect direction at `intersection_4way`, the player
+  is routed through a randomly-sampled chain of 2–3 flavour rooms (from `FLAVOUR_ROOM_POOL`)
+  before looping back to the 4-way intersection; Step 1 clue is re-rolled on every re-entry
+  (`step1_roll` was already called on entry), giving a genuinely fresh puzzle each time the
+  player is lost. Added `import random` and `FLAVOUR_ROOM_POOL` import to `main.py`.
+
 ## 2026-05-04
 
 - Implemented puzzle Step 3/4 – janitor song clue: `step3_is_correct` helper added to

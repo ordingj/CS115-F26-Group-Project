@@ -377,6 +377,107 @@ def build_events() -> EventQueue:
         )
     )
 
+    # ── location-based atmosphere ──────────────────────────────────────────────
+    queue.register(
+        Event(
+            event_id="lobby_ceiling_tiles",
+            message=(
+                "You notice the ceiling tiles above are slightly misaligned, "
+                "like they've been recently disturbed."
+            ),
+            # move_count >= 1 so this fires after the first action, not at game start.
+            condition=lambda s: s.current_room_id == "lobby" and s.move_count >= 1,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="hallway_no_signal",
+            message="You check your phone. No signal. The battery shows 3%.",
+            condition=lambda s: s.current_room_id == "hallway_approach",
+        )
+    )
+    queue.register(
+        Event(
+            event_id="intersection_door_numbers",
+            message=(
+                "You glance at a door: Room 314... No — Room 413. You blink. "
+                "It reads Room 134. You stop trying to read door numbers."
+            ),
+            # Only fires after at least one wrong turn so it feels earned.
+            condition=lambda s: (
+                s.current_room_id == "intersection_4way" and s.wrong_turns >= 1
+            ),
+        )
+    )
+    queue.register(
+        Event(
+            event_id="bathroom_stall_click",
+            message=(
+                "The stall doors click softly, one after another. "
+                "All still locked. You are sure you heard a click."
+            ),
+            condition=lambda s: s.current_room_id == "bathroom",
+        )
+    )
+    queue.register(
+        Event(
+            event_id="janitor_same_spot",
+            message=(
+                "The janitor hasn't moved. He's been mopping the same small patch "
+                "of floor for as long as you can remember."
+            ),
+            condition=lambda s: s.current_room_id == "hallway_janitor",
+        )
+    )
+
+    # ── move-count-based tension ───────────────────────────────────────────────
+    queue.register(
+        Event(
+            event_id="tension_door_closes",
+            message="A door closes somewhere down the hall. You didn't see anyone.",
+            condition=lambda s: s.move_count == 3,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="tension_footsteps_stop",
+            message="You hear footsteps behind you. You stop. They stop.",
+            condition=lambda s: s.move_count == 8,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="tension_light_buzzes",
+            message=(
+                "The fluorescent light directly above you buzzes and dims. "
+                "It flickers back on. You are exactly where you were."
+            ),
+            condition=lambda s: s.move_count == 13,
+        )
+    )
+    queue.register(
+        Event(
+            event_id="tension_marker_smell",
+            message=(
+                "Somewhere ahead: a strong smell of dry-erase markers. "
+                "Classrooms must be close."
+            ),
+            condition=lambda s: s.move_count == 20,
+        )
+    )
+
+    # ── additional time warning ────────────────────────────────────────────────
+    queue.register(
+        Event(
+            event_id="time_warning_3min",
+            message=(
+                "The hallway lights flicker once. You check your watch — "
+                "three minutes left."
+            ),
+            condition=lambda s: 165 < s.time_remaining <= 180,
+        )
+    )
+
     return queue
 
 
