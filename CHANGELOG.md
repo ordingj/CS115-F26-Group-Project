@@ -1,9 +1,14 @@
 ## 2026-05-05
 
+- Added curses-based split-pane UI (`game/curses_engine.py`, `CursesEngine`). Layout:
+  1-line header (title + live time); room panel (upper ~40% — name, description, exits,
+  items, puzzle hints); scrolling log panel (event messages and command output); 1-line
+  command input. Colour support when the terminal provides it. `main.py` updated with
+  `--no-curses` flag to fall back to plain-text mode; curses is the default.
 - Added win/lose/weird endings: entering `room_314` sets `state.won = True` and
-  `state.game_over = True` (`main.py`); `engine._handle_end()` now has three branches —
-  weird ending (won with ≥300 s remaining: empty room, exam is tomorrow), normal win,
-  and time-out lose. Lose condition was already implicit in `GameState.tick()`.
+  `state.game_over = True` (`main.py`); `engine._handle_end()` now has three branches — weird
+  ending (won with ≥300 s remaining: empty room, exam is tomorrow), normal win, and time-out
+  lose. Lose condition was already implicit in `GameState.tick()`.
 - Added ambient narrative events (10 new one-shot events in `build_events()`, `main.py`):
   location-based (lobby ceiling tiles, hallway no signal, intersection door numbers after a
   wrong turn, bathroom stall click, janitor mopping the same spot); move-count tension

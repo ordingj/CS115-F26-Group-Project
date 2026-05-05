@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import random
 
 from game.command import CommandRegistry
@@ -490,6 +491,17 @@ def build_events() -> EventQueue:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(
+        prog="main",
+        description="Final Exam: Room 314 – a text adventure",
+    )
+    ap.add_argument(
+        "--no-curses",
+        action="store_true",
+        help="Run in plain-text mode (no curses UI)",
+    )
+    args = ap.parse_args()
+
     rooms = build_world()
     state = GameState(current_room_id="lobby")
     event_queue = build_events()
@@ -499,9 +511,14 @@ def main() -> None:
     engine_ref: list[GameEngine | None] = [None]
     registry = build_commands(engine_ref)
 
-    engine = GameEngine(rooms, state, registry, event_queue)
-    engine_ref[0] = engine
+    if args.no_curses:
+        engine: GameEngine = GameEngine(rooms, state, registry, event_queue)
+    else:
+        from game.curses_engine import CursesEngine
 
+        engine = CursesEngine(rooms, state, registry, event_queue)
+
+    engine_ref[0] = engine
     engine.run()
 
 

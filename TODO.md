@@ -1,4 +1,4 @@
-<!-- working-on: implement curses-based UI -->
+<!-- working-on: (all done) -->
 
 # Project Tasklist
 
@@ -34,6 +34,6 @@
 - [x] Add lose condition – time runs out before entering Room 314
 - [x] Add weird ending – arrive in Room 314 with at least 5 minutes remaining
 
-- [/] implement curses-based UI with live-updating room descriptions, command input, and event
-      notifications
-  - [ ] upper section for room description, lower section with command input and event log
+- [x] implement curses-based UI with live-updating room descriptions, command input, and event
+  notifications
+  - [x] upper section for room description, lower section with command input and event log
