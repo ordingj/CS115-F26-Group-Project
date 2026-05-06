@@ -1,21 +1,24 @@
 ## 2026-05-06
 
-- Environmental clues for puzzles: bathroom now requires `SOAP HANDS` before
-  `RINSE HANDS` and blocks the exit with contextual feedback ("You feel like you
-  should wash your hands." / "Your hands are still soapy.") until the puzzle is
-  solved; janitor hallway now shows an ambient lyric snippet in the room
-  description that grows from one line to the full chorus as time runs low,
-  letting the player identify the song's left/right direction without issuing a
+- Escalating hints for bathroom puzzle: repeated `RINSE` attempts while the water is off
+  (phase 1) now produce progressively more explicit guidance — first reminding the player to
+  type `stop`, then explaining the sensor mechanic, and on the third+ miss spelling out the
+  full RINSE → STOP → RINSE → STOP sequence. Counter resets on successful `STOP`.
+
+- Environmental clues for puzzles: bathroom now requires `SOAP HANDS` before `RINSE HANDS` and
+  blocks the exit with contextual feedback ("You feel like you should wash your hands." / "Your
+  hands are still soapy.") until the puzzle is solved; janitor hallway now shows an ambient
+  lyric snippet in the room description that grows from one line to the full chorus as time
+  runs low, letting the player identify the song's left/right direction without issuing a
   `LISTEN` command.
 
-- Simplification pass: precomputed `_STEP1_CLUE_TYPES` in `puzzle.py` to avoid
-  rebuilding the key list on every puzzle roll; extracted `_bathroom_status()` helper in
-  `engine.py`, eliminating the duplicated inline logic in `curses_engine.py` and normalising
-  the status messages across both UIs; added `_route()` helper in `main.py` for the repeated
-  3-direction exit-wiring pattern; simplified flavor-chain wiring with `zip` instead of
-  manual `enumerate` + conditional indexing; fixed `handle_listen` chorus display to indent
-  each lyric line individually, correcting broken output for multi-line YAML block-scalar
-  choruses.
+- Simplification pass: precomputed `_STEP1_CLUE_TYPES` in `puzzle.py` to avoid rebuilding the
+  key list on every puzzle roll; extracted `_bathroom_status()` helper in `engine.py`,
+  eliminating the duplicated inline logic in `curses_engine.py` and normalising the status
+  messages across both UIs; added `_route()` helper in `main.py` for the repeated 3-direction
+  exit-wiring pattern; simplified flavor-chain wiring with `zip` instead of manual
+  `enumerate` + conditional indexing; fixed `handle_listen` chorus display to indent each lyric
+  line individually, correcting broken output for multi-line YAML block-scalar choruses.
 
 - Code quality pass: added comprehensive docstrings to all public functions and methods across
   `game/state.py`, `game/command.py`, `game/event.py`, `game/engine.py`,

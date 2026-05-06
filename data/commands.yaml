@@ -65,8 +65,12 @@ responses:
       rinse the soap off. Your hands are clean. Type 'stop' to take your hands away.
     phase_1_wrong: >-
       The water is off. Pull your hands back first \u2014 try 'stop' to let the motion sensor
-      reset.
-    phase_done: "Your hands are already rinsed. Type 'stop' to finish."
+      reset.    phase_1_wrong_2: >- The water is still off. The sensor won't re-trigger until
+      the basin is empty. Try 'stop' to pull your hands away, then rinse again.
+    phase_1_wrong_3: >-
+      Tip: the sequence is RINSE → STOP → RINSE → STOP. The water cut off after your first
+      rinse — type 'stop' now.    phase_done: "Your hands are already rinsed. Type 'stop' to
+      finish."
 
   stop:
     no_location: "There's nothing to stop here."

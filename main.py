@@ -286,7 +286,15 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             room.attributes["wash_phase"] = 3
             return _CMD["rinse"]["phase_2"]
         if phase == 1:
-            return _CMD["rinse"]["phase_1_wrong"]
+            # Count failed attempts to escalate hint specificity.
+            attempts = room.attributes.get("rinse_phase1_attempts", 0) + 1
+            room.attributes["rinse_phase1_attempts"] = attempts
+            key = (
+                "phase_1_wrong_3" if attempts >= 3
+                else "phase_1_wrong_2" if attempts == 2
+                else "phase_1_wrong"
+            )
+            return _CMD["rinse"][key]
         return _CMD["rinse"]["phase_done"]
 
     registry.register("rinse", handle_rinse)
@@ -307,10 +315,10 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             return _CMD["stop"]["already_clean"]
         phase = room.attributes.get("wash_phase", 0)
         if phase == 1:
-            # Pull hands away after first rinse — sensor detects empty space,
-            # water comes back on.
+            # Advance to phase 2; reset the failed-attempt counter.
             room.attributes["wash_phase"] = 2
             room.attributes["sink_running"] = True
+            room.attributes["rinse_phase1_attempts"] = 0
             return _CMD["stop"]["phase_1"]
         if phase == 3:
             # Final stop after successful rinse — hands are clean.
