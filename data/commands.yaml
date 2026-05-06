@@ -10,6 +10,8 @@ responses:
   move:
     no_exit: "You can't go that way."
     blocked: "That way is blocked."
+    hands_not_washed: "You feel like you should wash your hands."
+    hands_still_soapy: "Your hands are still soapy. You should rinse them off first."
     wrong_4way:
       "\nSomething feels wrong. The hallway ahead looks exactly like one you've already walked.
       You think you've been here before."
@@ -42,8 +44,17 @@ responses:
     no_target: "Knock on what?"
     no_answer: "You knock on the {target}. No answer."
 
+  soap:
+    no_location: "There's no soap dispenser here."
+    already_clean: "Your hands are already clean."
+    already_applied: "There's already soap on your hands. (Try: RINSE HANDS)"
+    wrong_phase: "Now's not the right time to apply soap."
+    applied: >-
+      You pump soap from the dispenser onto your hands. They lather up. (Try: RINSE HANDS)
+
   rinse:
     no_location: "There's nothing to rinse here."
+    no_soap: "You should use soap first. (Try: SOAP HANDS)"
     already_clean: "Your hands are already clean."
     phase_0: >-
       You hold your hands under the faucet. The water runs over them for a moment... then cuts

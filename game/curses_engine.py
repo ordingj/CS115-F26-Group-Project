@@ -182,6 +182,12 @@ class CursesEngine(GameEngine):
             if status:
                 lines.append("")
                 lines.extend(textwrap.wrap(status, inner_w))
+        elif room.room_id == "hallway_janitor":
+            hint = self._janitor_hint()
+            if hint:
+                lines.append("")
+                for hline in hint.splitlines():
+                    lines.extend(textwrap.wrap(hline, inner_w) or [""])
 
         exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:

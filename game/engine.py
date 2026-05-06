@@ -85,6 +85,11 @@ class GameEngine:
             status = self._bathroom_status()
             if status:
                 print(f"\n{status}")
+        # Show ambient janitor lyric clue (grows with urgency).
+        elif room.room_id == "hallway_janitor":
+            hint = self._janitor_hint()
+            if hint:
+                print(f"\n{hint}")
         exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:
             print(f"Exits: {', '.join(exits)}")
@@ -108,7 +113,9 @@ class GameEngine:
         if self.state.has_flag("step2_hands_washed"):
             return "The sink is off. Your hands are clean."
         if running and phase == 0:
-            return "The motion-sensor sink is running. (Try: RINSE HANDS)"
+            if room.attributes.get("soap_applied"):
+                return "The motion-sensor sink is running. Your hands are soapy — rinse them off. (Try: RINSE HANDS)"
+            return "The motion-sensor sink is running. Try the soap dispenser first. (Try: SOAP HANDS)"
         if not running and phase == 1:
             return (
                 "The water cut off. Your hands are still soapy. "
@@ -122,6 +129,26 @@ class GameEngine:
         if running and phase == 3:
             return "The water is still running. Your hands are clean. (Try: STOP)"
         return ""
+
+    def _janitor_hint(self) -> str:
+        """Return an ambient chorus snippet for the janitor hallway, scaled to urgency.
+
+        Shows one lyric line when time is plentiful, two around the midpoint,
+        and all remaining lines in the final stretch, so the clue becomes
+        easier to use as pressure mounts.
+        """
+        room = self.current_room()
+        if room is None or room.room_id != "hallway_janitor":
+            return ""
+        chorus = self.state.active_clues.get("step3_song_chorus", "")
+        if not chorus:
+            return ""
+        all_lines = chorus.strip().splitlines()
+        t = self.state.time_remaining
+        count = 1 if t > 300 else (2 if t > 150 else len(all_lines))
+        shown = all_lines[:count]
+        indented = "\n".join(f"  {line}" for line in shown)
+        return "The janitor is humming. You catch a few lyrics:\n" + indented
 
     def _print_intro(self) -> None:
         """Print the one-time opening title card and story hook."""

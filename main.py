@@ -74,6 +74,13 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         if destination_id is None:
             return _CMD["move"]["blocked"]
 
+        # Environmental clue: block exit from bathroom until hands are washed.
+        if room.room_id == "bathroom" and not state.has_flag("step2_hands_washed"):
+            phase = room.attributes.get("wash_phase", 0)
+            if phase in (1, 2):
+                return _CMD["move"]["hands_still_soapy"]
+            return _CMD["move"]["hands_not_washed"]
+
         # ── Step 1: 4-way intersection puzzle ─────────────────────────────────
         if room.room_id == "intersection_4way":
             if not step1_is_correct(verb, state):
@@ -268,6 +275,8 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             return _CMD["rinse"]["already_clean"]
         phase = room.attributes.get("wash_phase", 0)
         if phase == 0:
+            if not room.attributes.get("soap_applied"):
+                return _CMD["rinse"]["no_soap"]
             # First attempt: water stops as soon as hands break the beam.
             room.attributes["wash_phase"] = 1
             room.attributes["sink_running"] = False
@@ -340,6 +349,24 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         return _CMD["listen"]["silence"]
 
     registry.register("listen", handle_listen)
+
+    # ── soap (use soap dispenser) ──────────────────────────────────────────────────────
+    def handle_soap(verb: str, target: str | None, state: GameState) -> str:
+        """Apply soap from the bathroom dispenser (required before rinsing)."""
+        engine = engine_ref[0]
+        room = engine.current_room() if engine else None
+        if room is None or room.room_id != "bathroom":
+            return _CMD["soap"]["no_location"]
+        if state.has_flag("step2_hands_washed"):
+            return _CMD["soap"]["already_clean"]
+        if room.attributes.get("soap_applied"):
+            return _CMD["soap"]["already_applied"]
+        if room.attributes.get("wash_phase", 0) != 0:
+            return _CMD["soap"]["wrong_phase"]
+        room.attributes["soap_applied"] = True
+        return _CMD["soap"]["applied"]
+
+    registry.register("soap", handle_soap)
 
     # ── help ───────────────────────────────────────────────────────────────────
     def handle_help(verb: str, target: str | None, state: GameState) -> str:

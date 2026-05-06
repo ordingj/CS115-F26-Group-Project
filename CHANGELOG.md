@@ -1,5 +1,13 @@
 ## 2026-05-06
 
+- Environmental clues for puzzles: bathroom now requires `SOAP HANDS` before
+  `RINSE HANDS` and blocks the exit with contextual feedback ("You feel like you
+  should wash your hands." / "Your hands are still soapy.") until the puzzle is
+  solved; janitor hallway now shows an ambient lyric snippet in the room
+  description that grows from one line to the full chorus as time runs low,
+  letting the player identify the song's left/right direction without issuing a
+  `LISTEN` command.
+
 - Simplification pass: precomputed `_STEP1_CLUE_TYPES` in `puzzle.py` to avoid
   rebuilding the key list on every puzzle roll; extracted `_bathroom_status()` helper in
   `engine.py`, eliminating the duplicated inline logic in `curses_engine.py` and normalising
