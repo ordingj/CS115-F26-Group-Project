@@ -1,12 +1,22 @@
-"""Event asset type and queue for time- and state-driven narrative beats."""
+"""Event asset type and queue for time- and state-driven narrative beats.
+
+:func:`load_events` reads ``data/events.yaml`` and returns a populated
+:class:`EventQueue` using :func:`_build_condition` to convert each
+declarative condition spec into a callable.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable
+
+import yaml
 
 if TYPE_CHECKING:
     from game.state import GameState
+
+_EVENTS_FILE = Path(__file__).parent.parent / "data" / "events.yaml"
 
 # Condition: (state) -> bool – True when the event should fire.
 EventCondition = Callable[["GameState"], bool]
@@ -57,3 +67,55 @@ class EventQueue:
         # Prune exhausted one-shot events.
         self._events = [e for e in self._events if not (e.one_shot and e._fired)]
         return messages
+
+
+# ── YAML loader ────────────────────────────────────────────────────────────────
+
+
+def _build_condition(spec: dict[str, Any]) -> EventCondition:
+    """Convert a declarative condition spec (from YAML) into a callable.
+
+    Supported types
+    ---------------
+    ``time_range``      – ``gt < state.time_remaining <= lte``
+    ``move_count_eq``   – ``state.move_count == value``
+    ``move_count_gte``  – ``state.move_count >= value``
+    ``location``        – ``state.current_room_id == room_id``
+    ``wrong_turns_gte`` – ``state.wrong_turns >= value``
+    ``all``             – all sub-conditions true (list under ``conditions``)
+    """
+    ctype = spec["type"]
+    if ctype == "time_range":
+        gt, lte = int(spec["gt"]), int(spec["lte"])
+        return lambda s: gt < s.time_remaining <= lte
+    if ctype == "move_count_eq":
+        val = int(spec["value"])
+        return lambda s: s.move_count == val
+    if ctype == "move_count_gte":
+        val = int(spec["value"])
+        return lambda s: s.move_count >= val
+    if ctype == "location":
+        room_id = str(spec["room_id"])
+        return lambda s: s.current_room_id == room_id
+    if ctype == "wrong_turns_gte":
+        val = int(spec["value"])
+        return lambda s: s.wrong_turns >= val
+    if ctype == "all":
+        sub = [_build_condition(c) for c in spec["conditions"]]
+        return lambda s: all(c(s) for c in sub)
+    raise ValueError(f"Unknown condition type: {ctype!r}")
+
+
+def load_events() -> EventQueue:
+    """Parse ``data/events.yaml`` and return a populated :class:`EventQueue`."""
+    raw: dict = yaml.safe_load(_EVENTS_FILE.read_text(encoding="utf-8"))
+    queue = EventQueue()
+    for entry in raw["events"]:
+        queue.register(
+            Event(
+                event_id=entry["event_id"],
+                message=entry["message"],
+                condition=_build_condition(entry["condition"]),
+            )
+        )
+    return queue

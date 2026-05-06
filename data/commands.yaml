@@ -1,0 +1,81 @@
+# commands.yaml — static response strings for player command handlers
+#
+# Strings containing {placeholder} use Python str.format() substitution.
+# Multi-line values use YAML folded scalars (>-) which collapse internal
+# line breaks to spaces and strip the trailing newline, matching the original
+# concatenated string literals in main.py.
+# Double-quoted strings support \n as a newline escape character.
+
+responses:
+
+  move:
+    no_exit: "You can't go that way."
+    blocked: "That way is blocked."
+    wrong_4way: "\nSomething feels wrong. The hallway ahead looks exactly like one you've already walked. You think you've been here before."
+    wrong_janitor: "\nThe hallway curves unexpectedly. After a few steps you recognise the tiles \u2014 you've looped back. The janitor is still mopping."
+
+  look:
+    mirror_fogged: >-
+      The mirror is fogged from the motion-sensor sinks. You can
+      barely see your own reflection.
+    sink_clean: "The sink is off. Your hands are already clean."
+    sink_running_rinse: "A motion-sensor sink. The water is running. (Try: RINSE HANDS)"
+    sink_running_stop: "A motion-sensor sink. The water is running. (Try: STOP)"
+    sink_off: >-
+      The sink is off. The motion sensor blinks.
+      (Try: STOP to pull your hands back)
+
+  read:
+    no_target: "Read what?"
+    detour_sign: "The sign reads: DETOUR \u2192 (an arrow points down the forward hallway)."
+    mirror_fogged: "The mirror is too fogged to read anything on it."
+    generic: "You read the {item}, but the text is hard to make out."
+    not_here: "There is no '{target}' here to read."
+
+  open:
+    no_target: "Open what?"
+    blocked: "You try to open the {target}, but it won't budge."
+
+  knock:
+    no_target: "Knock on what?"
+    no_answer: "You knock on the {target}. No answer."
+
+  rinse:
+    no_location: "There's nothing to rinse here."
+    already_clean: "Your hands are already clean."
+    phase_0: >-
+      You hold your hands under the faucet. The water runs over them
+      for a moment... then cuts off. Your hands are sudsy but the sensor
+      timed out before you could rinse. Try 'stop' to let the sensor reset.
+    phase_2: >-
+      You put your hands back under quickly. This time the water stays
+      running long enough to rinse the soap off. Your hands are clean.
+      Type 'stop' to take your hands away.
+    phase_1_wrong: >-
+      The water is off. Pull your hands back first \u2014 try 'stop' to let
+      the motion sensor reset.
+    phase_done: "Your hands are already rinsed. Type 'stop' to finish."
+
+  stop:
+    no_location: "There's nothing to stop here."
+    already_clean: "The sink is already off. Your hands are clean."
+    phase_1: >-
+      You pull your hands back. A moment passes... the sensor detects
+      the empty basin and the water comes back on. Quick \u2014 rinse hands again.
+    phase_3: >-
+      You take your hands away. The water shuts off. Your hands are
+      clean. The steam on the mirror has cleared a little.
+      You should look at it.
+    phase_0: "You step back from the sink. The water keeps running."
+    fallback: "You step back from the sink."
+
+  listen:
+    silence: "You listen carefully. The building hums with an uneasy silence."
+    janitor_prefix: "The janitor is humming. You catch a few bars of the chorus:"
+
+  check:
+    watch: "Your watch reads {time} remaining."
+    other: "You check the {target}, but find nothing useful."
+
+  quit:
+    farewell: "You give up and head home. Game over."

@@ -1,0 +1,139 @@
+# events.yaml — ambient and time-based narrative events for Final Exam: Room 314
+#
+# Each entry has:
+#   event_id  – unique string identifier
+#   message   – text shown to the player when the event fires
+#   condition – declarative condition spec evaluated by game/event.py
+#
+# Condition types:
+#   time_range      – gt < state.time_remaining <= lte
+#   move_count_eq   – state.move_count == value
+#   move_count_gte  – state.move_count >= value
+#   location        – state.current_room_id == room_id
+#   wrong_turns_gte – state.wrong_turns >= value
+#   all             – all sub-conditions (list under 'conditions') must be true
+
+events:
+
+  # ── time-based warnings ────────────────────────────────────────────────────
+
+  - event_id: time_warning_5min
+    message: "Your phone buzzes. A calendar reminder: exam starts in 5 minutes."
+    condition:
+      type: time_range
+      gt: 285
+      lte: 300
+
+  - event_id: time_warning_3min
+    message: >-
+      The hallway lights flicker once. You check your watch —
+      three minutes left.
+    condition:
+      type: time_range
+      gt: 165
+      lte: 180
+
+  - event_id: time_warning_2min
+    message: >-
+      You are standing underneath a vent that is blasting cold air.
+      Two minutes left.
+    condition:
+      type: time_range
+      gt: 105
+      lte: 120
+
+  # ── move-count tension ─────────────────────────────────────────────────────
+
+  - event_id: tension_door_closes
+    message: "A door closes somewhere down the hall. You didn't see anyone."
+    condition:
+      type: move_count_eq
+      value: 3
+
+  - event_id: ominous_footsteps
+    message: "You hear footsteps behind you. When you turn around, no one is there."
+    condition:
+      type: move_count_eq
+      value: 5
+
+  - event_id: tension_footsteps_stop
+    message: "You hear footsteps behind you. You stop. They stop."
+    condition:
+      type: move_count_eq
+      value: 8
+
+  - event_id: ominous_watched
+    message: "You feel like you're being watched."
+    condition:
+      type: move_count_eq
+      value: 10
+
+  - event_id: tension_light_buzzes
+    message: >-
+      The fluorescent light directly above you buzzes and dims.
+      It flickers back on. You are exactly where you were.
+    condition:
+      type: move_count_eq
+      value: 13
+
+  - event_id: ominous_whisper
+    message: "You hear a whisper, but can't make out the words."
+    condition:
+      type: move_count_eq
+      value: 15
+
+  - event_id: tension_marker_smell
+    message: >-
+      Somewhere ahead: a strong smell of dry-erase markers.
+      Classrooms must be close.
+    condition:
+      type: move_count_eq
+      value: 20
+
+  # ── location atmosphere ────────────────────────────────────────────────────
+
+  - event_id: lobby_ceiling_tiles
+    message: >-
+      You notice the ceiling tiles above are slightly misaligned,
+      like they've been recently disturbed.
+    condition:
+      type: all
+      conditions:
+        - type: location
+          room_id: lobby
+        - type: move_count_gte
+          value: 1
+
+  - event_id: hallway_no_signal
+    message: "You check your phone. No signal. The battery shows 3%."
+    condition:
+      type: location
+      room_id: hallway_approach
+
+  - event_id: intersection_door_numbers
+    message: >-
+      You glance at a door: Room 314... No — Room 413. You blink.
+      It reads Room 134. You stop trying to read door numbers.
+    condition:
+      type: all
+      conditions:
+        - type: location
+          room_id: intersection_4way
+        - type: wrong_turns_gte
+          value: 1
+
+  - event_id: bathroom_stall_click
+    message: >-
+      The stall doors click softly, one after another.
+      All still locked. You are sure you heard a click.
+    condition:
+      type: location
+      room_id: bathroom
+
+  - event_id: janitor_same_spot
+    message: >-
+      The janitor hasn't moved. He's been mopping the same small patch
+      of floor for as long as you can remember.
+    condition:
+      type: location
+      room_id: hallway_janitor

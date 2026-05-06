@@ -1,5 +1,12 @@
 ## 2026-05-05
 
+- Extracted all command response strings into `data/commands.yaml` and all ambient/time-based
+  event definitions into `data/events.yaml`. `main.py` now loads a `_CMD` dict from
+  `commands.yaml` at module level and delegates `build_events()` to `load_events()` in
+  `game/event.py`. Added `_build_condition()` to `game/event.py` to translate declarative
+  YAML condition specs (`time_range`, `move_count_eq`, `move_count_gte`, `location`,
+  `wrong_turns_gte`, `all`) into `EventCondition` callables. 15 events, all command verbs
+  covered. Hardcoded strings removed from Python source.
 - Extracted all room description/name/exit/item/attribute data into `data/rooms.yaml`.
   `game/world.py` now loads and parses the YAML at import time via `pyyaml`; `build_world()`
   and `FLAVOR_ROOM_POOL` are derived from that data. Added `requirements.txt` tracking

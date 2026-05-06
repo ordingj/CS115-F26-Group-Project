@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import random
+from pathlib import Path
+
+import yaml
 
 from game.command import CommandRegistry
 from game.engine import GameEngine
-from game.event import Event, EventQueue
+from game.event import EventQueue, load_events
 from game.puzzle import (
     step1_is_correct,
     step1_roll,
@@ -18,6 +21,11 @@ from game.puzzle import (
 )
 from game.state import GameState
 from game.world import FLAVOR_ROOM_POOL, build_world
+
+# ── static response strings (loaded from data/commands.yaml) ──────────────────
+_CMD: dict = yaml.safe_load(
+    (Path(__file__).parent / "data" / "commands.yaml").read_text(encoding="utf-8")
+)["responses"]
 
 
 # ── command builder ────────────────────────────────────────────────────────────
@@ -41,10 +49,10 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         if room is None:
             return "You are nowhere."
         if verb not in room.exits:
-            return "You can't go that way."
+            return _CMD["move"]["no_exit"]
         destination_id = room.exits[verb]
         if destination_id is None:
-            return "That way is blocked."
+            return _CMD["move"]["blocked"]
 
         # ── Step 1: 4-way intersection puzzle ─────────────────────────────────
         if room.room_id == "intersection_4way":
@@ -54,10 +62,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
                 state.set_flag("step1_wrong_way", True)
                 state.current_room_id = destination_id
                 engine.describe_current_room()
-                return (
-                    "\nSomething feels wrong. The hallway ahead looks exactly like "
-                    "one you've already walked. You think you've been here before."
-                )
+                return _CMD["move"]["wrong_4way"]
             # Correct direction — advance puzzle state.
             state.puzzle_step = 1
             state.set_flag("step1_solved", True)
@@ -71,11 +76,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
                 state.wrong_turns += 1
                 state.current_room_id = destination_id
                 engine.describe_current_room()
-                return (
-                    "\nThe hallway curves unexpectedly. After a few steps you "
-                    "recognise the tiles — you've looped back. The janitor is "
-                    "still mopping."
-                )
+                return _CMD["move"]["wrong_janitor"]
             # Correct direction — advance past the janitor.
             state.puzzle_step = 3
             state.set_flag("step3_solved")
@@ -150,10 +151,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             room = engine.current_room()
             if room and room.room_id == "bathroom":
                 if not state.has_flag("step2_hands_washed"):
-                    return (
-                        "The mirror is fogged from the motion-sensor sinks. You can "
-                        "barely see your own reflection."
-                    )
+                    return _CMD["look"]["mirror_fogged"]
                 return step2_mirror_text(state)
         if target == "sink":
             room = engine.current_room()
@@ -161,17 +159,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
                 phase = room.attributes.get("wash_phase", 0)
                 running = room.attributes.get("sink_running", False)
                 if state.has_flag("step2_hands_washed"):
-                    return "The sink is off. Your hands are already clean."
+                    return _CMD["look"]["sink_clean"]
                 if running:
-                    hint = "rinse hands" if phase in (0, 2) else "stop"
-                    return (
-                        f"A motion-sensor sink. The water is running. "
-                        f"(Try: {hint.upper()})"
-                    )
-                return (
-                    "The sink is off. The motion sensor blinks. "
-                    "(Try: STOP to pull your hands back)"
-                )
+                    key = "sink_running_rinse" if phase in (0, 2) else "sink_running_stop"
+                    return _CMD["look"][key]
+                return _CMD["look"]["sink_off"]
         engine.describe_current_room()
         return ""
 
@@ -181,43 +173,43 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     # ── check watch ────────────────────────────────────────────────────────────
     def handle_check(verb: str, target: str | None, state: GameState) -> str:
         if target in (None, "watch", "time"):
-            return f"Your watch reads {state.formatted_time()} remaining."
-        return f"You check the {target}, but find nothing useful."
+            return _CMD["check"]["watch"].format(time=state.formatted_time())
+        return _CMD["check"]["other"].format(target=target)
 
     registry.register("check", handle_check)
 
     # ── read ───────────────────────────────────────────────────────────────────
     def handle_read(verb: str, target: str | None, state: GameState) -> str:
         if target is None:
-            return "Read what?"
+            return _CMD["read"]["no_target"]
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room is None:
-            return f"There is no '{target}' here to read."
+            return _CMD["read"]["not_here"].format(target=target)
         # Room-specific readable items.
         if room.room_id == "lobby" and target == "detour_sign":
-            return "The sign reads: DETOUR → (an arrow points down the forward hallway)."
+            return _CMD["read"]["detour_sign"]
         if room.room_id == "bathroom" and target == "mirror":
             if not state.has_flag("step2_hands_washed"):
-                return "The mirror is too fogged to read anything on it."
+                return _CMD["read"]["mirror_fogged"]
             return step2_mirror_text(state)
         if target in room.items:
-            return f"You read the {room.items[target]}, but the text is hard to make out."
-        return f"There is no '{target}' here to read."
+            return _CMD["read"]["generic"].format(item=room.items[target])
+        return _CMD["read"]["not_here"].format(target=target)
 
     # ── open ───────────────────────────────────────────────────────────────────
     def handle_open(verb: str, target: str | None, state: GameState) -> str:
         if target is None:
-            return "Open what?"
-        return f"You try to open the {target}, but it won't budge."
+            return _CMD["open"]["no_target"]
+        return _CMD["open"]["blocked"].format(target=target)
 
     registry.register("open", handle_open)
 
     # ── knock ──────────────────────────────────────────────────────────────────
     def handle_knock(verb: str, target: str | None, state: GameState) -> str:
         if target is None:
-            return "Knock on what?"
-        return f"You knock on the {target}. No answer."
+            return _CMD["knock"]["no_target"]
+        return _CMD["knock"]["no_answer"].format(target=target)
 
     registry.register("knock", handle_knock)
 
@@ -232,33 +224,22 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room is None or room.room_id != "bathroom":
-            return "There's nothing to rinse here."
+            return _CMD["rinse"]["no_location"]
         if state.has_flag("step2_hands_washed"):
-            return "Your hands are already clean."
+            return _CMD["rinse"]["already_clean"]
         phase = room.attributes.get("wash_phase", 0)
         if phase == 0:
             # First attempt: water stops as soon as hands break the beam.
             room.attributes["wash_phase"] = 1
             room.attributes["sink_running"] = False
-            return (
-                "You hold your hands under the faucet. The water runs over them "
-                "for a moment... then cuts off. Your hands are sudsy but the sensor "
-                "timed out before you could rinse. Try 'stop' to let the sensor reset."
-            )
+            return _CMD["rinse"]["phase_0"]
         if phase == 2:
             # Trick: quick enough after 'stop' — water stays running this time.
             room.attributes["wash_phase"] = 3
-            return (
-                "You put your hands back under quickly. This time the water stays "
-                "running long enough to rinse the soap off. Your hands are clean. "
-                "Type 'stop' to take your hands away."
-            )
+            return _CMD["rinse"]["phase_2"]
         if phase == 1:
-            return (
-                "The water is off. Pull your hands back first — try 'stop' to let "
-                "the motion sensor reset."
-            )
-        return "Your hands are already rinsed. Type 'stop' to finish."
+            return _CMD["rinse"]["phase_1_wrong"]
+        return _CMD["rinse"]["phase_done"]
 
     registry.register("rinse", handle_rinse)
     registry.register("wash", handle_rinse)
@@ -268,33 +249,26 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room is None or room.room_id != "bathroom":
-            return "There's nothing to stop here."
+            return _CMD["stop"]["no_location"]
         if state.has_flag("step2_hands_washed"):
-            return "The sink is already off. Your hands are clean."
+            return _CMD["stop"]["already_clean"]
         phase = room.attributes.get("wash_phase", 0)
         if phase == 1:
             # Pull hands away after first rinse — sensor detects empty space,
             # water comes back on.
             room.attributes["wash_phase"] = 2
             room.attributes["sink_running"] = True
-            return (
-                "You pull your hands back. A moment passes... the sensor detects "
-                "the empty basin and the water comes back on. Quick — rinse hands again."
-            )
+            return _CMD["stop"]["phase_1"]
         if phase == 3:
             # Final stop after successful rinse — hands are clean.
             room.attributes["wash_phase"] = 4
             room.attributes["sink_running"] = False
             state.set_flag("step2_hands_washed")
             state.set_flag("step2_mirror_clue_visible")
-            return (
-                "You take your hands away. The water shuts off. Your hands are "
-                "clean. The steam on the mirror has cleared a little. "
-                "You should look at it."
-            )
+            return _CMD["stop"]["phase_3"]
         if phase == 0:
-            return "You step back from the sink. The water keeps running."
-        return "You step back from the sink."
+            return _CMD["stop"]["phase_0"]
+        return _CMD["stop"]["fallback"]
 
     registry.register("stop", handle_stop)
 
@@ -311,11 +285,8 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             # Mark song as heard regardless of whether it was freshly rolled.
             room.attributes["song_heard"] = True
             state.set_flag("step3_song_heard")
-            return (
-                "The janitor is humming. You catch a few bars of the chorus: "
-                f"\n  \"{chorus}\""
-            )
-        return "You listen carefully. The building hums with an uneasy silence."
+            return _CMD["listen"]["janitor_prefix"] + f'\n  "{chorus}"'
+        return _CMD["listen"]["silence"]
 
     registry.register("listen", handle_listen)
 
@@ -330,7 +301,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     # ── quit ───────────────────────────────────────────────────────────────────
     def handle_quit(verb: str, target: str | None, state: GameState) -> str:
         state.game_over = True
-        return "You give up and head home. Game over."
+        return _CMD["quit"]["farewell"]
 
     registry.register("quit", handle_quit)
 
@@ -341,150 +312,8 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
 
 def build_events() -> EventQueue:
-    """Register ambient and time-based narrative events."""
-    queue = EventQueue()
-
-    queue.register(
-        Event(
-            event_id="time_warning_5min",
-            message="Your phone buzzes. A calendar reminder: exam starts in 5 minutes.",
-            condition=lambda s: 285 < s.time_remaining <= 300,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="time_warning_2min",
-            message=(
-                "You are standing underneath a vent that is blasting cold air. "
-                "Two minutes left."
-            ),
-            condition=lambda s: 105 < s.time_remaining <= 120,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="ominous_footsteps",
-            message="You hear footsteps behind you. When you turn around, no one is there.",
-            condition=lambda s: s.move_count == 5,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="ominous_watched",
-            message="You feel like you're being watched.",
-            condition=lambda s: s.move_count == 10,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="ominous_whisper",
-            message="You hear a whisper, but can't make out the words.",
-            condition=lambda s: s.move_count == 15,
-        )
-    )
-
-    # ── location-based atmosphere ──────────────────────────────────────────────
-    queue.register(
-        Event(
-            event_id="lobby_ceiling_tiles",
-            message=(
-                "You notice the ceiling tiles above are slightly misaligned, "
-                "like they've been recently disturbed."
-            ),
-            # move_count >= 1 so this fires after the first action, not at game start.
-            condition=lambda s: s.current_room_id == "lobby" and s.move_count >= 1,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="hallway_no_signal",
-            message="You check your phone. No signal. The battery shows 3%.",
-            condition=lambda s: s.current_room_id == "hallway_approach",
-        )
-    )
-    queue.register(
-        Event(
-            event_id="intersection_door_numbers",
-            message=(
-                "You glance at a door: Room 314... No — Room 413. You blink. "
-                "It reads Room 134. You stop trying to read door numbers."
-            ),
-            # Only fires after at least one wrong turn so it feels earned.
-            condition=lambda s: (
-                s.current_room_id == "intersection_4way" and s.wrong_turns >= 1
-            ),
-        )
-    )
-    queue.register(
-        Event(
-            event_id="bathroom_stall_click",
-            message=(
-                "The stall doors click softly, one after another. "
-                "All still locked. You are sure you heard a click."
-            ),
-            condition=lambda s: s.current_room_id == "bathroom",
-        )
-    )
-    queue.register(
-        Event(
-            event_id="janitor_same_spot",
-            message=(
-                "The janitor hasn't moved. He's been mopping the same small patch "
-                "of floor for as long as you can remember."
-            ),
-            condition=lambda s: s.current_room_id == "hallway_janitor",
-        )
-    )
-
-    # ── move-count-based tension ───────────────────────────────────────────────
-    queue.register(
-        Event(
-            event_id="tension_door_closes",
-            message="A door closes somewhere down the hall. You didn't see anyone.",
-            condition=lambda s: s.move_count == 3,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="tension_footsteps_stop",
-            message="You hear footsteps behind you. You stop. They stop.",
-            condition=lambda s: s.move_count == 8,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="tension_light_buzzes",
-            message=(
-                "The fluorescent light directly above you buzzes and dims. "
-                "It flickers back on. You are exactly where you were."
-            ),
-            condition=lambda s: s.move_count == 13,
-        )
-    )
-    queue.register(
-        Event(
-            event_id="tension_marker_smell",
-            message=(
-                "Somewhere ahead: a strong smell of dry-erase markers. "
-                "Classrooms must be close."
-            ),
-            condition=lambda s: s.move_count == 20,
-        )
-    )
-
-    # ── additional time warning ────────────────────────────────────────────────
-    queue.register(
-        Event(
-            event_id="time_warning_3min",
-            message=(
-                "The hallway lights flicker once. You check your watch — "
-                "three minutes left."
-            ),
-            condition=lambda s: 165 < s.time_remaining <= 180,
-        )
-    )
-
-    return queue
+    """Load ambient and time-based narrative events from data/events.yaml."""
+    return load_events()
 
 
 # ── entry point ────────────────────────────────────────────────────────────────
