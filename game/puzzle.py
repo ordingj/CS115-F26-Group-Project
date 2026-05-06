@@ -29,6 +29,7 @@ import yaml
 from game.state import GameState
 
 _SONGS_FILE = Path(__file__).parent.parent / "data" / "songs.yaml"
+_PUZZLE_FILE = Path(__file__).parent.parent / "data" / "puzzle.yaml"
 
 
 def _load_songs() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
@@ -47,32 +48,15 @@ def _load_songs() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
 
 _LEFT_SONGS, _RIGHT_SONGS = _load_songs()
 
+_PUZZLE: dict = yaml.safe_load(_PUZZLE_FILE.read_text(encoding="utf-8"))
+
 # ── Step 1 – 4-way intersection ───────────────────────────────────────────────
 
 _STEP1_DIRS: list[str] = ["forward", "left", "right"]
 
-# Maps (clue_type, correct_dir) → clue text template.
-# {correct} will be replaced with the actual direction shown/implied.
-_STEP1_CLUE_TEMPLATES: dict[str, str] = {
-    # Flickering light: player should go the OPPOSITE direction to the flicker.
-    "light": (
-        "The fluorescent light above the {opposite} hallway flickers and buzzes, "
-        "throwing that corridor into a strobing half-dark. Every other direction "
-        "is steady."
-    ),
-    # Bake-sale sign: arrow points the correct way.
-    "sign": (
-        "A bright orange flyer is taped to the wall: "
-        '"CS CLUB BAKE SALE – THIS WAY →" '
-        "with a hand-drawn arrow pointing {correct}."
-    ),
-    # Shadow: disappears around the corner in the correct direction.
-    "shadow": (
-        "Out of the corner of your eye you catch a shadow — someone, or something — "
-        "slipping around the corner to your {correct}. "
-        "By the time you look directly, it's gone."
-    ),
-}
+# Clue templates loaded from data/puzzle.yaml — keyed by clue_type.
+# {correct} = correct direction; {opposite} = opposite direction.
+_STEP1_CLUE_TEMPLATES: dict[str, str] = _PUZZLE["step1_clue_templates"]
 
 _OPPOSITE: dict[str, str] = {
     "forward": "back",
@@ -130,10 +114,8 @@ def step2_mirror_text(state: GameState) -> str:
         return ""
     # Backwards text effect: the mirror shows "TFEL OG" or "THGIR OG"
     backwards = ("GO " + direction.upper())[::-1]
-    return (
-        f"The mirror is fogged from the sinks. You wipe a clear patch. "
-        f"Above the door frame, written in what looks like dry-erase marker, "
-        f'you can barely make out: "{backwards}" — backwards, of course. It says: GO {direction.upper()}.'
+    return _PUZZLE["step2_mirror_text"].format(
+        backwards=backwards, direction=direction.upper()
     )
 
 

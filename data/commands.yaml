@@ -65,12 +65,14 @@ responses:
       rinse the soap off. Your hands are clean. Type 'stop' to take your hands away.
     phase_1_wrong: >-
       The water is off. Pull your hands back first \u2014 try 'stop' to let the motion sensor
-      reset.    phase_1_wrong_2: >- The water is still off. The sensor won't re-trigger until
-      the basin is empty. Try 'stop' to pull your hands away, then rinse again.
+      reset.
+    phase_1_wrong_2: >-
+      The water is still off. The sensor won't re-trigger until the basin is empty. Try 'stop'
+      to pull your hands away, then rinse again.
     phase_1_wrong_3: >-
-      Tip: the sequence is RINSE → STOP → RINSE → STOP. The water cut off after your first
-      rinse — type 'stop' now.    phase_done: "Your hands are already rinsed. Type 'stop' to
-      finish."
+      Tip: the sequence is RINSE \u2192 STOP \u2192 RINSE \u2192 STOP. The water cut off after
+      your first rinse \u2014 type 'stop' now.
+    phase_done: "Your hands are already rinsed. Type 'stop' to finish."
 
   stop:
     no_location: "There's nothing to stop here."
@@ -94,3 +96,45 @@ responses:
 
   quit:
     farewell: "You give up and head home. Game over."
+
+  unknown: "I don't know how to '{verb}'."
+
+  bathroom_status:
+    clean: "The sink is off. Your hands are clean."
+    soap_needed: >-
+      The motion-sensor sink is running. Try the soap dispenser first. (Try: SOAP HANDS)
+    soapy: >-
+      The motion-sensor sink is running. Your hands are soapy \u2014 rinse them off. (Try:
+      RINSE HANDS)
+    water_cut: >-
+      The water cut off. Your hands are still soapy. (Try: STOP to pull your hands back)
+    water_back: >-
+      The water came back on. Quick \u2014 rinse again before it cuts off. (Try: RINSE HANDS)
+    final_rinse: "The water is still running. Your hands are clean. (Try: STOP)"
+
+  ambient:
+    janitor_hint_prefix: "The janitor is humming. You catch a few lyrics:"
+
+  intro:
+    title: "FINAL EXAM: ROOM 314"
+    opening: "Your final exam starts in 10 minutes."
+    problem: "The problem: you can't find the classroom."
+    teacher: >-
+      Your teacher's voice echoes: "The final will be in Room 314. You really don't want to be
+      late."
+    curses_subtitle: "Your final exam starts in 10 minutes. Find Room 314."
+    help_hint: "Type HELP for a list of commands."
+
+  end:
+    won_early: |-
+      YOU MADE IT TO ROOM 314 — FIVE MINUTES EARLY.
+      The room is empty. The desks are empty. The exam schedule on the door says
+      the final isn't until TOMORROW. You sit down anyway. You are very tired.
+    won: |-
+      YOU MADE IT TO ROOM 314!
+      The exam is already in progress, but you're here.
+    lost: |-
+      TIME'S UP.
+      You hear the distant sound of exam papers being collected.
+      Game over.
+    press_any_key: "Press any key to exit."

@@ -1,5 +1,11 @@
 ## 2026-05-06
 
+- YAML extraction: all player-facing narrative strings removed from Python source files.
+  Clue templates and mirror text moved to `data/puzzle.yaml`; bathroom status messages,
+  janitor hint prefix, intro title/opening/teacher dialogue, end-screen text, and
+  unknown-command response moved to `data/commands.yaml`. No hardcoded player-facing text
+  remains in any `.py` file — all strings are referenced by unambiguous YAML keys.
+
 - Escalating hints for bathroom puzzle: repeated `RINSE` attempts while the water is off
   (phase 1) now produce progressively more explicit guidance — first reminding the player to
   type `stop`, then explaining the sensor mechanic, and on the third+ miss spelling out the

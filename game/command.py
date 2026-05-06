@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional
+
+import yaml
 
 if TYPE_CHECKING:
     from game.state import GameState
+
+_CMD: dict = yaml.safe_load(
+    (Path(__file__).parent.parent / "data" / "commands.yaml").read_text(encoding="utf-8")
+)["responses"]
 
 # ── canonical verb sets ───────────────────────────────────────────────────────
 
@@ -79,7 +86,7 @@ class CommandRegistry:
         """
         handler = self._handlers.get(command.verb)
         if handler is None:
-            return f"I don't know how to '{command.verb}'."
+            return _CMD["unknown"].format(verb=command.verb)
         return handler(command.verb, command.target, state)
 
     def known_verbs(self) -> list[str]:

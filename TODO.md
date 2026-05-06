@@ -1,11 +1,14 @@
 # Project Tasklist
 
 - [x] code quality pass - look for opportunities to simplify, reduce complexity, and increase
-  efficiency; this will be judged so we need to do a great job here
+      efficiency; this will be judged so we need to do a great job here
 
-- [ ] extract all narrative text into yaml files and load them in at runtime to clean up the
-      code; also makes it easier to add new rooms/events/commands without touching code
-  - [ ] do the same for commands and events
+- [x] extract all narrative text into yaml files and load them in at runtime to clean up the
+  code; also makes it easier to add new rooms/events/commands without touching code
+  - [x] do the same for commands and events; don't hardcode any strings in the python,
+    reference the yaml data instead; use unambiguous keys to look up the right string for each
+    situation, so it's obvious when editing the yaml what each string is for and you don't have
+    to cross-reference with the code to understand the context
 
 - [x] implement environmental clues for puzzles
   - [x] bathroom "You feel like you should wash your hands." if they try to leave without

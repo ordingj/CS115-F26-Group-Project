@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
+
+import yaml
 
 from game.command import CommandParser, CommandRegistry
 from game.event import EventQueue
 from game.puzzle import step1_clue_text
 from game.room import Room
 from game.state import GameState
+
+_UI: dict = yaml.safe_load(
+    (Path(__file__).parent.parent / "data" / "commands.yaml").read_text(encoding="utf-8")
+)["responses"]
 
 
 class GameEngine:
@@ -110,24 +117,19 @@ class GameEngine:
             return ""
         phase = room.attributes.get("wash_phase", 0)
         running = room.attributes.get("sink_running", False)
+        bs = _UI["bathroom_status"]
         if self.state.has_flag("step2_hands_washed"):
-            return "The sink is off. Your hands are clean."
+            return bs["clean"]
         if running and phase == 0:
             if room.attributes.get("soap_applied"):
-                return "The motion-sensor sink is running. Your hands are soapy — rinse them off. (Try: RINSE HANDS)"
-            return "The motion-sensor sink is running. Try the soap dispenser first. (Try: SOAP HANDS)"
+                return bs["soapy"]
+            return bs["soap_needed"]
         if not running and phase == 1:
-            return (
-                "The water cut off. Your hands are still soapy. "
-                "(Try: STOP to pull your hands back)"
-            )
+            return bs["water_cut"]
         if running and phase == 2:
-            return (
-                "The water came back on. Quick — rinse again before it cuts off. "
-                "(Try: RINSE HANDS)"
-            )
+            return bs["water_back"]
         if running and phase == 3:
-            return "The water is still running. Your hands are clean. (Try: STOP)"
+            return bs["final_rinse"]
         return ""
 
     def _janitor_hint(self) -> str:
@@ -148,37 +150,30 @@ class GameEngine:
         count = 1 if t > 300 else (2 if t > 150 else len(all_lines))
         shown = all_lines[:count]
         indented = "\n".join(f"  {line}" for line in shown)
-        return "The janitor is humming. You catch a few lyrics:\n" + indented
+        return _UI["ambient"]["janitor_hint_prefix"] + "\n" + indented
 
     def _print_intro(self) -> None:
         """Print the one-time opening title card and story hook."""
+        intro = _UI["intro"]
         print("\n" + "=" * 60)
-        print("  FINAL EXAM: ROOM 314")
+        print(f"  {intro['title']}")
         print("=" * 60)
-        print("Your final exam starts in 10 minutes.")
-        print("The problem: you can't find the classroom.\n")
-        print("Your teacher's voice echoes: \"The final will be in Room 314.")
-        print("You really don't want to be late.\"\n")
+        print(intro["opening"])
+        print(intro["problem"] + "\n")
+        print(intro["teacher"] + "\n")
 
     def _handle_end(self) -> None:
         """Print the appropriate end screen based on final game state."""
+        end = _UI["end"]
         if self.state.won and self.state.time_remaining >= 300:
-            print("\n" + "=" * 60)
-            print("  YOU MADE IT TO ROOM 314. FIVE MINUTES EARLY.")
-            print("  The room is empty. The desks are empty. The exam")
-            print("  schedule on the door says the final isn't until")
-            print("  TOMORROW. You sit down anyway. You are very tired.")
-            print("=" * 60)
+            key = "won_early"
         elif self.state.won:
-            print("\n" + "=" * 60)
-            print("  YOU MADE IT TO ROOM 314!")
-            print("  The exam is already in progress, but you're here.")
-            print("=" * 60)
+            key = "won"
         elif self.state.quit:
-            pass  # farewell already printed by handle_quit
+            return  # farewell already printed by handle_quit
         else:
-            print("\n" + "=" * 60)
-            print("  TIME'S UP.")
-            print("  You hear the distant sound of exam papers being collected.")
-            print("  Game over.")
-            print("=" * 60)
+            key = "lost"
+        print("\n" + "=" * 60)
+        for line in end[key].splitlines():
+            print(f"  {line}")
+        print("=" * 60)

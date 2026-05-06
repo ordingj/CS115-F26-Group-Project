@@ -1,0 +1,27 @@
+# puzzle.yaml — narrative text for puzzle clues
+#
+# step1_clue_templates: keyed by clue_type; use {correct} and {opposite} placeholders.
+# step2_mirror_text: use {backwards} (reversed "GO DIRECTION") and {direction} (upper-cased).
+
+step1_clue_templates:
+  # The fluorescent light above the *wrong* hallway flickers — go the other way.
+  light: >-
+    The fluorescent light above the {opposite} hallway flickers and buzzes,
+    throwing that corridor into a strobing half-dark. Every other direction
+    is steady.
+
+  # A bake-sale sign with a hand-drawn arrow points the correct way.
+  sign: >-
+    A bright orange flyer is taped to the wall: "CS CLUB BAKE SALE — THIS WAY →"
+    with a hand-drawn arrow pointing {correct}.
+
+  # A fleeting shadow slips around the corner in the correct direction.
+  shadow: >-
+    Out of the corner of your eye you catch a shadow — someone, or something —
+    slipping around the corner to your {correct}. By the time you look directly,
+    it's gone.
+
+step2_mirror_text: >-
+  The mirror is fogged from the sinks. You wipe a clear patch. Above the door frame,
+  written in what looks like dry-erase marker, you can barely make out: "{backwards}"
+  — backwards, of course. It says: GO {direction}.

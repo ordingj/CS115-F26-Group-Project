@@ -12,7 +12,7 @@ from __future__ import annotations
 import curses
 import textwrap
 
-from game.engine import GameEngine
+from game.engine import GameEngine, _UI
 from game.puzzle import step1_clue_text
 
 # Fraction of the terminal height devoted to the room panel.
@@ -68,9 +68,10 @@ class CursesEngine(GameEngine):
         self._setup_windows()
 
         # Intro messages logged before the first room description.
-        self._log("FINAL EXAM: ROOM 314")
-        self._log("Your final exam starts in 10 minutes. Find Room 314.")
-        self._log("Type HELP for a list of commands.")
+        intro = _UI["intro"]
+        self._log(intro["title"])
+        self._log(intro["curses_subtitle"])
+        self._log(intro["help_hint"])
         self._log("")
 
         self.describe_current_room()
@@ -253,34 +254,23 @@ class CursesEngine(GameEngine):
 
     def _handle_end(self) -> None:
         """Log the appropriate end screen and wait for a keypress before exiting."""
+        end = _UI["end"]
         if self.state.won and self.state.time_remaining >= 300:
-            end_lines = [
-                "YOU MADE IT TO ROOM 314 \u2014 FIVE MINUTES EARLY.",
-                "The room is empty. The desks are empty. The exam",
-                "schedule on the door says the final isn't until TOMORROW.",
-                "You sit down anyway. You are very tired.",
-            ]
+            end_lines = end["won_early"].splitlines()
         elif self.state.won:
-            end_lines = [
-                "YOU MADE IT TO ROOM 314!",
-                "The exam is already in progress, but you're here.",
-            ]
+            end_lines = end["won"].splitlines()
         elif self.state.quit:
             # Farewell message was already logged by handle_quit; just confirm exit.
             end_lines = []
         else:
-            end_lines = [
-                "TIME'S UP.",
-                "You hear the distant sound of exam papers being collected.",
-                "Game over.",
-            ]
+            end_lines = end["lost"].splitlines()
 
         self._log("")
         self._log("=" * max(1, self._w - 2))
         for line in end_lines:
             self._log(line)
         self._log("=" * max(1, self._w - 2))
-        self._log("Press any key to exit.")
+        self._log(_UI["end"]["press_any_key"])
 
         if self._input_win:
             self._input_win.erase()
