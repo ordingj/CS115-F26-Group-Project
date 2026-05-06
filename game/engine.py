@@ -119,6 +119,8 @@ class GameEngine:
             print("  YOU MADE IT TO ROOM 314!")
             print("  The exam is already in progress, but you're here.")
             print("=" * 60)
+        elif self.state.quit:
+            pass  # farewell already printed by handle_quit
         else:
             print("\n" + "=" * 60)
             print("  TIME'S UP.")

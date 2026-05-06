@@ -43,7 +43,7 @@ class GameState:
     # ── terminal conditions ───────────────────────────────────────────────────
     game_over: bool = False
     won: bool = False
-
+    quit: bool = False
     # ── helpers ───────────────────────────────────────────────────────────────
 
     def tick(self) -> None:

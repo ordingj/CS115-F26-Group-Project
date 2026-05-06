@@ -187,7 +187,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         if room is None:
             return _CMD["read"]["not_here"].format(target=target)
         # Room-specific readable items.
-        if room.room_id == "lobby" and target == "detour_sign":
+        if room.room_id == "lobby" and target in ("detour_sign", "sign"):
             return _CMD["read"]["detour_sign"]
         if room.room_id == "bathroom" and target == "mirror":
             if not state.has_flag("step2_hands_washed"):
@@ -196,6 +196,8 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         if target in room.items:
             return _CMD["read"]["generic"].format(item=room.items[target])
         return _CMD["read"]["not_here"].format(target=target)
+
+    registry.register("read", handle_read)
 
     # ── open ───────────────────────────────────────────────────────────────────
     def handle_open(verb: str, target: str | None, state: GameState) -> str:
@@ -300,6 +302,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── quit ───────────────────────────────────────────────────────────────────
     def handle_quit(verb: str, target: str | None, state: GameState) -> str:
+        state.quit = True
         state.game_over = True
         return _CMD["quit"]["farewell"]
 

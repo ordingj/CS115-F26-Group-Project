@@ -1,8 +1,17 @@
 ## 2026-05-05
 
-- Extracted janitor song pool into `data/songs.yaml` (20 entries, 10 per direction). `game/puzzle.py`
-  now loads `_LEFT_SONGS` / `_RIGHT_SONGS` from YAML at import time via `_load_songs()`;
-  hardcoded `list[tuple[str, str]]` literals removed.
+- Fixed three bugs discovered during playtesting: `read` command was defined but never
+  registered with the command registry; `read sign` in the lobby was rejected because the
+  handler only matched the internal key `"detour_sign"` rather than the natural alias `"sign"`;
+  `quit` incorrectly triggered the "TIME'S UP" losing screen instead of just printing the
+  farewell message. Fix details: added `registry.register("read", handle_read)` in `main.py`;
+  widened the lobby sign match to `target in ("detour_sign", "sign")`; added `quit: bool = False`
+  to `GameState` and an `elif self.state.quit: pass` branch in `GameEngine._handle_end()` so
+  the time-out screen is suppressed on a voluntary quit.
+
+- Extracted janitor song pool into `data/songs.yaml` (20 entries, 10 per direction).
+  `game/puzzle.py` now loads `_LEFT_SONGS` / `_RIGHT_SONGS` from YAML at import time via
+  `_load_songs()`; hardcoded `list[tuple[str, str]]` literals removed.
 - Extracted all command response strings into `data/commands.yaml` and all ambient/time-based
   event definitions into `data/events.yaml`. `main.py` now loads a `_CMD` dict from
   `commands.yaml` at module level and delegates `build_events()` to `load_events()` in
