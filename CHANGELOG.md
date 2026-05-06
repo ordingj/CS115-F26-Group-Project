@@ -1,10 +1,14 @@
 ## 2026-05-05
 
-- Added curses-based split-pane UI (`game/curses_engine.py`, `CursesEngine`). Layout:
-  1-line header (title + live time); room panel (upper ~40% — name, description, exits,
-  items, puzzle hints); scrolling log panel (event messages and command output); 1-line
-  command input. Colour support when the terminal provides it. `main.py` updated with
-  `--no-curses` flag to fall back to plain-text mode; curses is the default.
+- Extracted all room description/name/exit/item/attribute data into `data/rooms.yaml`.
+  `game/world.py` now loads and parses the YAML at import time via `pyyaml`; `build_world()`
+  and `FLAVOUR_ROOM_POOL` are derived from that data. Added `requirements.txt` tracking
+  `pyyaml>=6.0`. Room count: 15 (9 structural + 6 flavour).
+- Added curses-based split-pane UI (`game/curses_engine.py`, `CursesEngine`). Layout: 1-line
+  header (title + live time); room panel (upper ~40% — name, description, exits, items, puzzle
+  hints); scrolling log panel (event messages and command output); 1-line command input. Colour
+  support when the terminal provides it. `main.py` updated with `--no-curses` flag to fall back
+  to plain-text mode; curses is the default.
 - Added win/lose/weird endings: entering `room_314` sets `state.won = True` and
   `state.game_over = True` (`main.py`); `engine._handle_end()` now has three branches — weird
   ending (won with ≥300 s remaining: empty room, exam is tomorrow), normal win, and time-out

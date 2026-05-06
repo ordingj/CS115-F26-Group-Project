@@ -2,6 +2,8 @@
 
 # Project Tasklist
 
+- [x] extract all description text into yaml files and build rooms from those to clean up the code; also makes it easier to add new rooms without touching code
+
 - [x] Create framework for text adventure game
   - [x] define asset types: rooms, commands, events (`game/room.py`, `game/command.py`,
         `game/event.py`)
@@ -35,5 +37,5 @@
 - [x] Add weird ending – arrive in Room 314 with at least 5 minutes remaining
 
 - [x] implement curses-based UI with live-updating room descriptions, command input, and event
-  notifications
+      notifications
   - [x] upper section for room description, lower section with command input and event log
