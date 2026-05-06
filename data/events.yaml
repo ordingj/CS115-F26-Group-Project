@@ -14,7 +14,6 @@
 #   all             – all sub-conditions (list under 'conditions') must be true
 
 events:
-
   # ── time-based warnings ────────────────────────────────────────────────────
 
   - event_id: time_warning_5min
@@ -26,8 +25,7 @@ events:
 
   - event_id: time_warning_3min
     message: >-
-      The hallway lights flicker once. You check your watch —
-      three minutes left.
+      The hallway lights flicker once. You check your watch — three minutes left.
     condition:
       type: time_range
       gt: 165
@@ -35,8 +33,7 @@ events:
 
   - event_id: time_warning_2min
     message: >-
-      You are standing underneath a vent that is blasting cold air.
-      Two minutes left.
+      You are standing underneath a vent that is blasting cold air. Two minutes left.
     condition:
       type: time_range
       gt: 105
@@ -70,8 +67,8 @@ events:
 
   - event_id: tension_light_buzzes
     message: >-
-      The fluorescent light directly above you buzzes and dims.
-      It flickers back on. You are exactly where you were.
+      The fluorescent light directly above you buzzes and dims. It flickers back on. You are
+      exactly where you were.
     condition:
       type: move_count_eq
       value: 13
@@ -84,8 +81,7 @@ events:
 
   - event_id: tension_marker_smell
     message: >-
-      Somewhere ahead: a strong smell of dry-erase markers.
-      Classrooms must be close.
+      Somewhere ahead: a strong smell of dry-erase markers. Classrooms must be close.
     condition:
       type: move_count_eq
       value: 20
@@ -94,8 +90,8 @@ events:
 
   - event_id: lobby_ceiling_tiles
     message: >-
-      You notice the ceiling tiles above are slightly misaligned,
-      like they've been recently disturbed.
+      You notice the ceiling tiles above are slightly misaligned, like they've been recently
+      disturbed.
     condition:
       type: all
       conditions:
@@ -112,8 +108,8 @@ events:
 
   - event_id: intersection_door_numbers
     message: >-
-      You glance at a door: Room 314... No — Room 413. You blink.
-      It reads Room 134. You stop trying to read door numbers.
+      You glance at a door: Room 314... No — Room 413. You blink. It reads Room 134. You stop
+      trying to read door numbers.
     condition:
       type: all
       conditions:
@@ -124,16 +120,16 @@ events:
 
   - event_id: bathroom_stall_click
     message: >-
-      The stall doors click softly, one after another.
-      All still locked. You are sure you heard a click.
+      The stall doors click softly, one after another. All still locked. You are sure you heard
+      a click.
     condition:
       type: location
       room_id: bathroom
 
   - event_id: janitor_same_spot
     message: >-
-      The janitor hasn't moved. He's been mopping the same small patch
-      of floor for as long as you can remember.
+      The janitor hasn't moved. He's been mopping the same small patch of floor for as long as
+      you can remember.
     condition:
       type: location
       room_id: hallway_janitor

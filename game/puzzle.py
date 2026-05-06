@@ -22,8 +22,30 @@ Step 3/4 (janitor song):
 from __future__ import annotations
 
 import random
+from pathlib import Path
+
+import yaml
 
 from game.state import GameState
+
+_SONGS_FILE = Path(__file__).parent.parent / "data" / "songs.yaml"
+
+
+def _load_songs() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """Return (left_songs, right_songs) loaded from data/songs.yaml."""
+    raw: dict = yaml.safe_load(_SONGS_FILE.read_text(encoding="utf-8"))
+    left: list[tuple[str, str]] = []
+    right: list[tuple[str, str]] = []
+    for entry in raw["songs"]:
+        pair = (entry["title"], entry["chorus"])
+        if entry["direction"] == "left":
+            left.append(pair)
+        else:
+            right.append(pair)
+    return left, right
+
+
+_LEFT_SONGS, _RIGHT_SONGS = _load_songs()
 
 # ── Step 1 – 4-way intersection ───────────────────────────────────────────────
 
@@ -114,33 +136,8 @@ def step2_mirror_text(state: GameState) -> str:
 
 # ── Step 3/4 – janitor song ────────────────────────────────────────────────────
 
-# 10 songs hinting LEFT, 10 hinting RIGHT.
-# Each entry: (title, chorus_line)  – chorus contains the direction word.
-_LEFT_SONGS: list[tuple[str, str]] = [
-    ("One Step Left",          "One step left, then you're home."),
-    ("Turn to the Left",       "Turn to the left, don't look back."),
-    ("Left Side of the Road",  "Always on the left side of the road."),
-    ("Left Behind",            "You left me left behind."),
-    ("Take a Left",            "Take a left at the end of the hall."),
-    ("Left of Center",         "I live just to the left of center."),
-    ("Keep Left",              "Keep left, keep left, keep left 'til the end."),
-    ("The Left Hand Path",     "Walk the left hand path with me."),
-    ("Left Turn Only",         "Left turn only, no going back."),
-    ("Left in the Dark",       "Left in the dark, and I can't find the light."),
-]
-
-_RIGHT_SONGS: list[tuple[str, str]] = [
-    ("Turn Right",             "Turn right when the hallway forks."),
-    ("Right Here Waiting",     "Right here waiting, right here for you."),
-    ("Right Side of History",  "Standing on the right side of history."),
-    ("Dead Right",             "Dead right, dead right, you know I'm right."),
-    ("Two Rights",             "Two rights make a wrong, but one right gets you home."),
-    ("Right Around the Corner","It's right around the corner, just stay on course."),
-    ("Always Right",           "Always right, even when I'm wrong."),
-    ("Hard Right",             "Hard right, hard right, commit to the turn."),
-    ("Right Place Wrong Time", "Right place, wrong time, story of my life."),
-    ("Right as Rain",          "Right as rain and twice as cold."),
-]
+# Song pools are loaded from data/songs.yaml at import time.
+# Each entry: (title, chorus_line) – chorus contains the direction word.
 
 
 def step3_roll(state: GameState) -> None:

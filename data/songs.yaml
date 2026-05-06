@@ -1,0 +1,84 @@
+# Janitor song pool for puzzle Step 3/4.
+# Each entry has a title and a chorus line containing the direction word.
+# direction: "left" | "right"
+
+songs:
+  - direction: left
+    title: "One Step Left"
+    chorus: "One step left, then you're home."
+
+  - direction: left
+    title: "Turn to the Left"
+    chorus: "Turn to the left, don't look back."
+
+  - direction: left
+    title: "Left Side of the Road"
+    chorus: "Always on the left side of the road."
+
+  - direction: left
+    title: "Left Behind"
+    chorus: "You left me left behind."
+
+  - direction: left
+    title: "Take a Left"
+    chorus: "Take a left at the end of the hall."
+
+  - direction: left
+    title: "Left of Center"
+    chorus: "I live just to the left of center."
+
+  - direction: left
+    title: "Keep Left"
+    chorus: "Keep left, keep left, keep left 'til the end."
+
+  - direction: left
+    title: "The Left Hand Path"
+    chorus: "Walk the left hand path with me."
+
+  - direction: left
+    title: "Left Turn Only"
+    chorus: "Left turn only, no going back."
+
+  - direction: left
+    title: "Left in the Dark"
+    chorus: "Left in the dark, and I can't find the light."
+
+  - direction: right
+    title: "Turn Right"
+    chorus: "Turn right when the hallway forks."
+
+  - direction: right
+    title: "Right Here Waiting"
+    chorus: "Right here waiting, right here for you."
+
+  - direction: right
+    title: "Right Side of History"
+    chorus: "Standing on the right side of history."
+
+  - direction: right
+    title: "Dead Right"
+    chorus: "Dead right, dead right, you know I'm right."
+
+  - direction: right
+    title: "Two Rights"
+    chorus: "Two rights make a wrong, but one right gets you home."
+
+  - direction: right
+    title: "Right Around the Corner"
+    chorus: "It's right around the corner, just stay on course."
+
+  - direction: right
+    title: "Always Right"
+    chorus: "Always right, even when I'm wrong."
+
+  - direction: right
+    title: "Hard Right"
+    chorus: "Hard right, hard right, commit to the turn."
+
+  - direction: right
+    title: "Right Place Wrong Time"
+    chorus: "Right place, wrong time, story of my life."
+
+  - direction: right
+    title: "Right as Rain"
+    chorus: "Right as rain and twice as cold."

@@ -1,7 +1,9 @@
 # Project Tasklist
 
+- [x] extract song titles/lyrics to yaml (`data/songs.yaml`); load in `game/puzzle.py`
+
 - [x] extract all description text into yaml files and build rooms from those to clean up the
-  code; also makes it easier to add new rooms without touching code
+      code; also makes it easier to add new rooms without touching code
   - [x] do the same for commands and events
 
 - [x] Create framework for text adventure game

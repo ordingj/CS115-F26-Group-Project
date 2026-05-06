@@ -1,10 +1,13 @@
 ## 2026-05-05
 
+- Extracted janitor song pool into `data/songs.yaml` (20 entries, 10 per direction). `game/puzzle.py`
+  now loads `_LEFT_SONGS` / `_RIGHT_SONGS` from YAML at import time via `_load_songs()`;
+  hardcoded `list[tuple[str, str]]` literals removed.
 - Extracted all command response strings into `data/commands.yaml` and all ambient/time-based
   event definitions into `data/events.yaml`. `main.py` now loads a `_CMD` dict from
   `commands.yaml` at module level and delegates `build_events()` to `load_events()` in
-  `game/event.py`. Added `_build_condition()` to `game/event.py` to translate declarative
-  YAML condition specs (`time_range`, `move_count_eq`, `move_count_gte`, `location`,
+  `game/event.py`. Added `_build_condition()` to `game/event.py` to translate declarative YAML
+  condition specs (`time_range`, `move_count_eq`, `move_count_gte`, `location`,
   `wrong_turns_gte`, `all`) into `EventCondition` callables. 15 events, all command verbs
   covered. Hardcoded strings removed from Python source.
 - Extracted all room description/name/exit/item/attribute data into `data/rooms.yaml`.
@@ -36,9 +39,9 @@
 - Implemented puzzle Step 3/4 – janitor song clue: `step3_is_correct` helper added to
   `game/puzzle.py`; `hallway_janitor` gains left/right/forward exits (puzzle-gated); exits
   wired on entry — correct direction (from song) leads to `hallway_final`, wrong directions
-  bounce through `flavor_copy_room` (whose `forward` exit is redirected to `hallway_janitor`
-  so wrong-way bounces loop back without re-rolling the clue); `LISTEN` in janitor hallway
-  returns the song chorus and sets `step3_song_heard` flag.
+  bounce through `flavor_copy_room` (whose `forward` exit is redirected to `hallway_janitor` so
+  wrong-way bounces loop back without re-rolling the clue); `LISTEN` in janitor hallway returns
+  the song chorus and sets `step3_song_heard` flag.
 - Redesigned handwashing puzzle as 4-phase motion-sensor trick: phase 0–4 state machine in
   `room.attributes["wash_phase"]`; `RINSE HANDS` and `STOP` commands advance phases; trick is
   RINSE → STOP (resets sensor) → RINSE quickly (water stays running) → STOP (done); engine
