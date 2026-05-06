@@ -7,23 +7,21 @@
 #   exits       – map of direction -> destination room_id (null = blocked)
 #   items       – optional map of item_id -> display name
 #   attributes  – optional map of arbitrary game-logic keys/values
-#   type        – "structural" or "flavour" (used to build FLAVOUR_ROOM_POOL)
+#   type        – "structural" or "flavor" (used to build FLAVOR_ROOM_POOL)
 #
 # Exit values that are set at runtime by puzzle logic are written as null here.
-# Flavour-room forward/back exits are also null; routing wires them at runtime.
+# Flavor-room forward/back exits are also null; routing wires them at runtime.
 
 rooms:
-
   # ── structural rooms ──────────────────────────────────────────────────────
 
   - room_id: lobby
     name: Building Lobby
     description: >-
-      The lobby is almost empty. Construction noise rumbles from the left
-      hallway, blocked off with orange cones and caution tape. A
-      hand-lettered detour sign points down a narrower hallway you've never
-      noticed before. The fluorescent lights buzz at a frequency just below
-      comfortable.
+      The lobby is almost empty. Construction noise rumbles from the left hallway, blocked off
+      with orange cones and caution tape. A hand-lettered detour sign points down a narrower
+      hallway you've never noticed before. The fluorescent lights buzz at a frequency just
+      below comfortable.
     exits:
       forward: hallway_approach
       left: null
@@ -36,10 +34,9 @@ rooms:
   - room_id: hallway_approach
     name: Detour Hallway
     description: >-
-      A corridor you don't recognise, though you must have walked through
-      it to get here. The room numbers don't match anything on the campus
-      map: 207, 208, 502, 11. One door has a dry-erase board that reads
-      FINAL EXAM TODAY in letters that are just slightly too large.
+      A corridor you don't recognise, though you must have walked through it to get here. The
+      room numbers don't match anything on the campus map: 207, 208, 502, 11. One door has a
+      dry-erase board that reads FINAL EXAM TODAY in letters that are just slightly too large.
     exits:
       forward: intersection_4way
       back: null
@@ -48,9 +45,8 @@ rooms:
   - room_id: intersection_4way
     name: 4-Way Intersection
     description: >-
-      A four-way intersection. Identical hallways stretch in every
-      direction. The fluorescent light above flickers twice, then steadies.
-      Something about this place feels like a reset.
+      A four-way intersection. Identical hallways stretch in every direction. The fluorescent
+      light above flickers twice, then steadies. Something about this place feels like a reset.
     exits:
       forward: null
       back: hallway_approach
@@ -64,9 +60,8 @@ rooms:
   - room_id: intersection_3way
     name: 3-Way Junction
     description: >-
-      The hallway opens into a three-way junction. A door labelled
-      RESTROOMS faces you directly ahead. Two more hallways branch off to
-      either side. The air smells faintly of bleach.
+      The hallway opens into a three-way junction. A door labelled RESTROOMS faces you directly
+      ahead. Two more hallways branch off to either side. The air smells faintly of bleach.
     exits:
       forward: bathroom
       left: null
@@ -80,10 +75,9 @@ rooms:
   - room_id: bathroom
     name: Restroom
     description: >-
-      The restroom is institutional and slightly too quiet. Three stall
-      doors are visible — all locked. A row of sinks lines one wall, their
-      motion-sensor faucets blinking on and off for no apparent reason. A
-      mirror spans the full width of the wall above the sinks.
+      The restroom is institutional and slightly too quiet. Three stall doors are visible — all
+      locked. A row of sinks lines one wall, their motion-sensor faucets blinking on and off
+      for no apparent reason. A mirror spans the full width of the wall above the sinks.
     exits:
       back: intersection_3way_exit
     items:
@@ -103,9 +97,9 @@ rooms:
   - room_id: intersection_3way_exit
     name: 3-Way Junction
     description: >-
-      The restroom door is now behind you. The same two hallways branch off
-      to either side, and a third stretches ahead. The bleach smell
-      lingers. You try to recall what the mirror said.
+      The restroom door is now behind you. The same two hallways branch off to either side, and
+      a third stretches ahead. The bleach smell lingers. You try to recall what the mirror
+      said.
     exits:
       back: bathroom
       left: null
@@ -119,10 +113,9 @@ rooms:
   - room_id: hallway_janitor
     name: Janitor's Hallway
     description: >-
-      The hallway ahead shifts subtly — different tile pattern, or maybe
-      the lighting changed. A janitor in grey coveralls is mopping the
-      floor, earbuds in, humming something to himself. He hasn't noticed
-      you, or doesn't care.
+      The hallway ahead shifts subtly — different tile pattern, or maybe the lighting changed.
+      A janitor in grey coveralls is mopping the floor, earbuds in, humming something to
+      himself. He hasn't noticed you, or doesn't care.
     exits:
       back: intersection_3way_exit
       left: null
@@ -138,8 +131,8 @@ rooms:
   - room_id: hallway_final
     name: Final Stretch
     description: >-
-      The room numbers are finally sequential: 308, 309, 310... You're
-      close. The air feels different here — stiller, expectant.
+      The room numbers are finally sequential: 308, 309, 310... You're close. The air feels
+      different here — stiller, expectant.
     exits:
       back: hallway_janitor
       forward: room_314
@@ -154,77 +147,72 @@ rooms:
       is_win_room: true
     type: structural
 
-  # ── flavour rooms ─────────────────────────────────────────────────────────
+  # ── flavor rooms ─────────────────────────────────────────────────────────
   # forward/back exits are null here; routing logic sets them at runtime.
 
-  - room_id: flavour_copy_room
+  - room_id: flavor_copy_room
     name: Copy Room
     description: >-
-      A copy room door is propped open with a ream of paper. The machine
-      inside is running — printing page after page of what looks like exam
-      questions. The output tray is already overflowing onto the floor. The
-      pages are blank on the side facing up.
+      A copy room door is propped open with a ream of paper. The machine inside is running —
+      printing page after page of what looks like exam questions. The output tray is already
+      overflowing onto the floor. The pages are blank on the side facing up.
     exits:
       forward: intersection_4way
       back: null
-    type: flavour
+    type: flavor
 
-  - room_id: flavour_faculty_office
+  - room_id: flavor_faculty_office
     name: Faculty Office
     description: >-
-      A faculty office with the nameplate removed from the door. The door
-      is slightly ajar. Through the gap you can see a desk covered in
-      papers, a lamp still on, a chair pushed back as if someone just stood
-      up. No one is visible. You hear nothing from inside.
+      A faculty office with the nameplate removed from the door. The door is slightly ajar.
+      Through the gap you can see a desk covered in papers, a lamp still on, a chair pushed
+      back as if someone just stood up. No one is visible. You hear nothing from inside.
     exits:
       forward: intersection_4way
       back: null
-    type: flavour
+    type: flavor
 
-  - room_id: flavour_study_lounge
+  - room_id: flavor_study_lounge
     name: Study Lounge
     description: >-
-      A small study lounge: two couches, a whiteboard, a table with a
-      laptop open on it. The screen shows a campus map, but the building
-      you're in isn't on it. The whiteboard reads GOOD LUCK in handwriting
-      you almost recognise.
+      A small study lounge: two couches, a whiteboard, a table with a laptop open on it. The
+      screen shows a campus map, but the building you're in isn't on it. The whiteboard reads
+      GOOD LUCK in handwriting you almost recognise.
     exits:
       forward: intersection_4way
       back: null
-    type: flavour
+    type: flavor
 
-  - room_id: flavour_stairwell
+  - room_id: flavor_stairwell
     name: Stairwell
     description: >-
-      A stairwell. The stairs go up but not down — there is a concrete
-      wall where the lower flight should be. You are definitely on the
-      ground floor. A flickering exit sign points in no particular
-      direction.
+      A stairwell. The stairs go up but not down — there is a concrete wall where the lower
+      flight should be. You are definitely on the ground floor. A flickering exit sign points
+      in no particular direction.
     exits:
       forward: intersection_4way
       back: null
-    type: flavour
+    type: flavor
 
-  - room_id: flavour_classroom_195
+  - room_id: flavor_classroom_195
     name: Classroom 195
     description: >-
-      A classroom — the kind with fixed, bolted-down desks arranged in
-      rows. The room number is 195. All the desks have been turned to face
-      the back wall. A single sheet of paper sits on each desk, face-down.
+      A classroom — the kind with fixed, bolted-down desks arranged in rows. The room number is
+      195. All the desks have been turned to face the back wall. A single sheet of paper sits
+      on each desk, face-down.
     exits:
       forward: intersection_4way
       back: null
     items:
       paper: a face-down sheet of paper
-    type: flavour
+    type: flavor
 
-  - room_id: flavour_water_fountain
+  - room_id: flavor_water_fountain
     name: Hallway Nook
     description: >-
-      A hallway nook with a water fountain. You press the button. The water
-      runs rust-brown for a few seconds, then clears. A handwritten note
-      taped above it reads: PERFECTLY SAFE.
+      A hallway nook with a water fountain. You press the button. The water runs rust-brown for
+      a few seconds, then clears. A handwritten note taped above it reads: PERFECTLY SAFE.
     exits:
       forward: intersection_4way
       back: null
-    type: flavour
+    type: flavor

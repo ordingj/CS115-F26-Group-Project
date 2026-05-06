@@ -35,7 +35,7 @@ class GameEngine:
         self.describe_current_room()
 
         while not self.state.game_over:
-            # Fire any pending events (time warnings, ambient flavour, etc.).
+            # Fire any pending events (time warnings, ambient flavor, etc.).
             for msg in self.event_queue.tick(self.state):
                 print(f"\n{msg}")
 

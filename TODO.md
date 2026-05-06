@@ -2,7 +2,8 @@
 
 # Project Tasklist
 
-- [x] extract all description text into yaml files and build rooms from those to clean up the code; also makes it easier to add new rooms without touching code
+- [x] extract all description text into yaml files and build rooms from those to clean up the
+      code; also makes it easier to add new rooms without touching code
 
 - [x] Create framework for text adventure game
   - [x] define asset types: rooms, commands, events (`game/room.py`, `game/command.py`,
@@ -19,7 +20,7 @@
     - [x] bathroom defined with sink/mirror puzzle attributes (Step 2)
   - [x] hallway with janitor - janitor present; song clue tracked in state (Step 4)
   - [x] Room 314 - win condition room defined
-  - [x] flavour hallway pool - 6 atmospheric rooms (`game/world.py::FLAVOUR_ROOM_POOL`);
+  - [x] flavor hallway pool - 6 atmospheric rooms (`game/world.py::FLAVOR_ROOM_POOL`);
         routing logic will splice 1-3 between puzzle nodes at runtime
 
 - [x] Implement puzzle Step 1 – 4-way intersection clue system (randomised each cycle)

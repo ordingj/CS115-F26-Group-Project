@@ -8,9 +8,9 @@ Rooms are tagged with a ``type`` field in the YAML:
 - ``structural`` – fixed puzzle-graph nodes (lobby, intersections, bathroom,
   janitor hallway, Room 314). Exits that depend on puzzle state are ``null``
   in the YAML and wired at runtime by ``main.py``.
-- ``flavour``    – atmospheric filler inserted 1-3 at a time between puzzle
+- ``flavor``    – atmospheric filler inserted 1-3 at a time between puzzle
   nodes. Their ``forward``/``back`` exits are also wired at runtime; their
-  IDs are exported via :data:`FLAVOUR_ROOM_POOL`.
+  IDs are exported via :data:`FLAVOR_ROOM_POOL`.
 """
 
 from __future__ import annotations
@@ -27,10 +27,10 @@ _DATA_FILE = Path(__file__).parent.parent / "data" / "rooms.yaml"
 
 
 def _load_rooms() -> tuple[list[Room], list[str]]:
-    """Parse rooms.yaml and return (all_rooms, flavour_room_ids)."""
+    """Parse rooms.yaml and return (all_rooms, flavor_room_ids)."""
     raw: dict = yaml.safe_load(_DATA_FILE.read_text(encoding="utf-8"))
     all_rooms: list[Room] = []
-    flavour_ids: list[str] = []
+    flavor_ids: list[str] = []
     for entry in raw["rooms"]:
         room_type = entry.pop("type", "structural")
         room = Room(
@@ -42,12 +42,12 @@ def _load_rooms() -> tuple[list[Room], list[str]]:
             attributes=entry.get("attributes") or {},
         )
         all_rooms.append(room)
-        if room_type == "flavour":
-            flavour_ids.append(room.room_id)
-    return all_rooms, flavour_ids
+        if room_type == "flavor":
+            flavor_ids.append(room.room_id)
+    return all_rooms, flavor_ids
 
 
-_ALL_ROOMS, FLAVOUR_ROOM_POOL = _load_rooms()
+_ALL_ROOMS, FLAVOR_ROOM_POOL = _load_rooms()
 
 # ── public builder ─────────────────────────────────────────────────────────────
 

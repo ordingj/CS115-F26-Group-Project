@@ -17,7 +17,7 @@ from game.puzzle import (
     step3_roll,
 )
 from game.state import GameState
-from game.world import FLAVOUR_ROOM_POOL, build_world
+from game.world import FLAVOR_ROOM_POOL, build_world
 
 
 # ── command builder ────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         # ── Step 1: 4-way intersection puzzle ─────────────────────────────────
         if room.room_id == "intersection_4way":
             if not step1_is_correct(verb, state):
-                # Wrong way — bounce through a flavour room then back.
+                # Wrong way — bounce through a flavor room then back.
                 state.wrong_turns += 1
                 state.set_flag("step1_wrong_way", True)
                 state.current_room_id = destination_id
@@ -65,7 +65,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
         # ── Step 3: janitor hallway puzzle ────────────────────────────────────
         elif room.room_id == "hallway_janitor" and verb in ("forward", "left", "right"):
             if not step3_is_correct(verb, state):
-                # Wrong way — bounce through a flavour room. The flavour room's
+                # Wrong way — bounce through a flavor room. The flavor room's
                 # forward exit is pointed back to hallway_janitor (set on entry),
                 # so the player can try again without a re-roll.
                 state.wrong_turns += 1
@@ -87,10 +87,10 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             step1_roll(state)
             correct_dir = state.active_clues["step1_correct_dir"]
             intersection = engine.rooms["intersection_4way"]
-            # Build a 2–3 room wrong-way chain from the flavour pool so lost
+            # Build a 2–3 room wrong-way chain from the flavor pool so lost
             # players traverse several atmospheric rooms before looping back.
             chain_len = random.randint(2, 3)
-            chain = random.sample(FLAVOUR_ROOM_POOL, chain_len)
+            chain = random.sample(FLAVOR_ROOM_POOL, chain_len)
             for i, room_id in enumerate(chain):
                 next_id = chain[i + 1] if i + 1 < chain_len else "intersection_4way"
                 engine.rooms[room_id].exits["forward"] = next_id
@@ -111,12 +111,12 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             mirror_dir = state.active_clues.get("step2_mirror_dir", "")
             exit_node = engine.rooms["intersection_3way_exit"]
             # The mirror clue direction leads toward the janitor hallway.
-            # The wrong directions loop back through flavour rooms.
+            # The wrong directions loop back through flavor rooms.
             for d in ("forward", "left", "right"):
-                exit_node.exits[d] = "hallway_janitor" if d == mirror_dir else "flavour_copy_room"
+                exit_node.exits[d] = "hallway_janitor" if d == mirror_dir else "flavor_copy_room"
 
         # Janitor hallway entry: roll Step 3 song clue on first visit;
-        # wire exits and redirect the shared flavour room's forward exit back
+        # wire exits and redirect the shared flavor room's forward exit back
         # here so wrong-way bounces return to the janitor (not the 4-way).
         elif destination_id == "hallway_janitor":
             if not state.has_flag("step3_rolled"):
@@ -125,9 +125,9 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             correct_dir = state.active_clues["step3_correct_dir"]
             janitor = engine.rooms["hallway_janitor"]
             for d in ("forward", "left", "right"):
-                janitor.exits[d] = "hallway_final" if d == correct_dir else "flavour_copy_room"
+                janitor.exits[d] = "hallway_final" if d == correct_dir else "flavor_copy_room"
             # Redirect wrong-way bounce destination back to janitor hallway.
-            engine.rooms["flavour_copy_room"].exits["forward"] = "hallway_janitor"
+            engine.rooms["flavor_copy_room"].exits["forward"] = "hallway_janitor"
 
         # Win condition: arriving at Room 314 ends the game as a win.
         elif destination_id == "room_314":
