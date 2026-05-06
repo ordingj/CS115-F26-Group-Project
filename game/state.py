@@ -20,6 +20,7 @@ class GameState:
         wrong_turns:        Number of times the player went the wrong way.
         game_over:          True when a terminal condition has been reached.
         won:                True if the player reached Room 314 in time.
+        quit:               True if the player voluntarily exited with the quit command.
     """
 
     # ── location ──────────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ class GameState:
     game_over: bool = False
     won: bool = False
     quit: bool = False
+
     # ── helpers ───────────────────────────────────────────────────────────────
 
     def tick(self) -> None:
@@ -55,9 +57,11 @@ class GameState:
             self.game_over = True
 
     def set_flag(self, key: str, value: bool = True) -> None:
+        """Set an arbitrary boolean flag by name (default True)."""
         self.flags[key] = value
 
     def has_flag(self, key: str) -> bool:
+        """Return the flag's value, or False if it has never been set."""
         return self.flags.get(key, False)
 
     def formatted_time(self) -> str:

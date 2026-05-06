@@ -1,5 +1,8 @@
 # Project Tasklist
 
+- [x] code quality pass - add type annotations, docstrings, comments; refactor for clarity and
+  maintainability; this will be judged so we need to do a great job here
+
 - [x] extract song titles/lyrics to yaml (`data/songs.yaml`); load in `game/puzzle.py`
 
 - [x] extract all description text into yaml files and build rooms from those to clean up the

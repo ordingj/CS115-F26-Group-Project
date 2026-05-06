@@ -1,3 +1,13 @@
+## 2026-05-06
+
+- Code quality pass: added comprehensive docstrings to all public functions and
+  methods across `game/state.py`, `game/command.py`, `game/event.py`,
+  `game/engine.py`, `game/curses_engine.py`, and `main.py`, covering parameters,
+  return values, and notable edge-case behaviour. Also fixed a latent bug in
+  `CursesEngine._handle_end()` where the voluntary-quit branch was missing,
+  causing the curses UI to show the "TIME'S UP" losing screen after a graceful
+  `quit` (mirroring the plain-text fix from the previous session).
+
 ## 2026-05-05
 
 - Fixed three bugs discovered during playtesting: `read` command was defined but never
@@ -5,9 +15,9 @@
   handler only matched the internal key `"detour_sign"` rather than the natural alias `"sign"`;
   `quit` incorrectly triggered the "TIME'S UP" losing screen instead of just printing the
   farewell message. Fix details: added `registry.register("read", handle_read)` in `main.py`;
-  widened the lobby sign match to `target in ("detour_sign", "sign")`; added `quit: bool = False`
-  to `GameState` and an `elif self.state.quit: pass` branch in `GameEngine._handle_end()` so
-  the time-out screen is suppressed on a voluntary quit.
+  widened the lobby sign match to `target in ("detour_sign", "sign")`; added
+  `quit: bool = False` to `GameState` and an `elif self.state.quit: pass` branch in
+  `GameEngine._handle_end()` so the time-out screen is suppressed on a voluntary quit.
 
 - Extracted janitor song pool into `data/songs.yaml` (20 entries, 10 per direction).
   `game/puzzle.py` now loads `_LEFT_SONGS` / `_RIGHT_SONGS` from YAML at import time via

@@ -21,6 +21,17 @@ class GameEngine:
         registry: CommandRegistry,
         event_queue: EventQueue,
     ) -> None:
+        """Initialise the engine with the full game world and a fresh state.
+
+        Args:
+            rooms:       Mapping of room_id -> :class:`~game.room.Room` built by
+                         :func:`~game.world.build_world`.
+            state:       The :class:`~game.state.GameState` for this session.
+            registry:    Command registry populated by
+                         :func:`main.build_commands`.
+            event_queue: Ambient event queue built by
+                         :func:`main.build_events`.
+        """
         self.rooms = rooms
         self.state = state
         self.registry = registry
@@ -54,6 +65,7 @@ class GameEngine:
         self._handle_end()
 
     def current_room(self) -> Optional[Room]:
+        """Return the :class:`~game.room.Room` the player is currently in, or None."""
         return self.rooms.get(self.state.current_room_id)
 
     def describe_current_room(self) -> None:
@@ -98,6 +110,7 @@ class GameEngine:
     # ── private helpers ────────────────────────────────────────────────────────
 
     def _print_intro(self) -> None:
+        """Print the one-time opening title card and story hook."""
         print("\n" + "=" * 60)
         print("  FINAL EXAM: ROOM 314")
         print("=" * 60)
@@ -107,6 +120,7 @@ class GameEngine:
         print("You really don't want to be late.\"\n")
 
     def _handle_end(self) -> None:
+        """Print the appropriate end screen based on final game state."""
         if self.state.won and self.state.time_remaining >= 300:
             print("\n" + "=" * 60)
             print("  YOU MADE IT TO ROOM 314. FIVE MINUTES EARLY.")

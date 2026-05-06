@@ -40,11 +40,13 @@ class Event:
     _fired: bool = field(default=False, init=False, repr=False)
 
     def should_fire(self, state: "GameState") -> bool:
+        """Return True if this event's condition is met and it hasn't already fired."""
         if self.one_shot and self._fired:
             return False
         return self.condition(state)
 
     def fire(self) -> str:
+        """Mark the event as fired and return its message string."""
         self._fired = True
         return self.message
 
@@ -53,9 +55,11 @@ class EventQueue:
     """Evaluates registered events each game tick and collects their output."""
 
     def __init__(self) -> None:
+        """Initialise an empty event queue."""
         self._events: list[Event] = []
 
     def register(self, event: Event) -> None:
+        """Add *event* to the queue so it will be evaluated each tick."""
         self._events.append(event)
 
     def tick(self, state: "GameState") -> list[str]:

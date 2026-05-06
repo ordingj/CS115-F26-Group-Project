@@ -34,14 +34,29 @@ _CMD: dict = yaml.safe_load(
 def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     """Register all player-facing commands and return the registry.
 
-    engine_ref is a one-element list so handlers can reach the live engine
+    ``engine_ref`` is a one-element list so handlers can reach the live engine
     without a circular import (the engine is not created until after the
     registry is built).
+
+    Args:
+        engine_ref: Mutable one-element list; ``engine_ref[0]`` will be the
+                    live :class:`~game.engine.GameEngine` by the time any
+                    handler is first called.
+
+    Returns:
+        A :class:`~game.command.CommandRegistry` with every verb registered.
     """
     registry = CommandRegistry()
 
     # ── movement ───────────────────────────────────────────────────────────────
     def handle_move(verb: str, target: str | None, state: GameState) -> str:
+        """Move the player one step in *verb* direction.
+
+        Validates the exit exists, applies puzzle-step routing logic for the
+        4-way intersection (Step 1) and janitor hallway (Step 3), wires dynamic
+        exits on key room transitions, and delegates room rendering to the engine.
+        Sets ``state.won`` and ``state.game_over`` when Room 314 is reached.
+        """
         engine = engine_ref[0]
         if engine is None:
             return "Error: engine not initialised."
@@ -143,6 +158,12 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── look / examine ─────────────────────────────────────────────────────────
     def handle_look(verb: str, target: str | None, state: GameState) -> str:
+        """Describe the current room, or examine a specific item.
+
+        Special cases: ``look mirror`` and ``look sink`` in the bathroom show
+        puzzle-relevant detail.  Any other target (or no target) triggers a
+        full room redescription.
+        """
         engine = engine_ref[0]
         if engine is None:
             return ""
@@ -172,6 +193,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── check watch ────────────────────────────────────────────────────────────
     def handle_check(verb: str, target: str | None, state: GameState) -> str:
+        """Report the time remaining, or deflect if a non-watch target is given."""
         if target in (None, "watch", "time"):
             return _CMD["check"]["watch"].format(time=state.formatted_time())
         return _CMD["check"]["other"].format(target=target)
@@ -180,6 +202,12 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── read ───────────────────────────────────────────────────────────────────
     def handle_read(verb: str, target: str | None, state: GameState) -> str:
+        """Read a named item in the current room.
+
+        Handles the lobby detour sign (accepts both ``"sign"`` and
+        ``"detour_sign"``), the bathroom mirror (only readable after hands are
+        washed), and any other item present in the room's item dict.
+        """
         if target is None:
             return _CMD["read"]["no_target"]
         engine = engine_ref[0]
@@ -201,6 +229,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── open ───────────────────────────────────────────────────────────────────
     def handle_open(verb: str, target: str | None, state: GameState) -> str:
+        """Attempt to open a door or object (always blocked in this game)."""
         if target is None:
             return _CMD["open"]["no_target"]
         return _CMD["open"]["blocked"].format(target=target)
@@ -209,6 +238,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── knock ──────────────────────────────────────────────────────────────────
     def handle_knock(verb: str, target: str | None, state: GameState) -> str:
+        """Knock on a door or object (never answered)."""
         if target is None:
             return _CMD["knock"]["no_target"]
         return _CMD["knock"]["no_answer"].format(target=target)
@@ -223,6 +253,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     #   3  hands clean, sink running      → 'stop' to finish
     #   4  done, sink off, hands clean
     def handle_rinse(verb: str, target: str | None, state: GameState) -> str:
+        """Advance the handwashing puzzle one phase forward.
+
+        Only active in the bathroom.  Interleaves with :func:`handle_stop`;
+        the full sequence is: rinse → stop → rinse → stop.
+        """
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room is None or room.room_id != "bathroom":
@@ -248,6 +283,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── stop (take hands away from sink) ──────────────────────────────────────
     def handle_stop(verb: str, target: str | None, state: GameState) -> str:
+        """Pull hands away from the sink, advancing the handwashing puzzle.
+
+        On phase 1, the sensor detects the empty basin and restarts water.
+        On phase 3, hands are marked clean and the mirror clue becomes readable.
+        """
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room is None or room.room_id != "bathroom":
@@ -276,6 +316,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── listen ──────────────────────────────────────────────────────
     def handle_listen(verb: str, target: str | None, state: GameState) -> str:
+        """Listen to the janitor's humming to discover the Step 3 song clue.
+
+        In the janitor hallway, prints the chorus line that encodes the correct
+        exit direction.  Rolls the clue if the entry handler somehow didn't fire.
+        """
         engine = engine_ref[0]
         room = engine.current_room() if engine else None
         if room and room.room_id == "hallway_janitor":
@@ -294,6 +339,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── help ───────────────────────────────────────────────────────────────────
     def handle_help(verb: str, target: str | None, state: GameState) -> str:
+        """List every registered command verb."""
         engine = engine_ref[0]
         verbs = engine.registry.known_verbs() if engine else []
         return "Commands: " + ", ".join(verbs)
@@ -302,6 +348,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── quit ───────────────────────────────────────────────────────────────────
     def handle_quit(verb: str, target: str | None, state: GameState) -> str:
+        """End the session gracefully; suppress the time-out losing screen."""
         state.quit = True
         state.game_over = True
         return _CMD["quit"]["farewell"]
@@ -323,6 +370,11 @@ def build_events() -> EventQueue:
 
 
 def main() -> None:
+    """Parse CLI arguments, build the game world, and start the engine.
+
+    Supports ``--no-curses`` to bypass the curses UI and run in plain stdout
+    mode (useful for testing and TTYs that don't support curses).
+    """
     ap = argparse.ArgumentParser(
         prog="main",
         description="Final Exam: Room 314 – a text adventure",

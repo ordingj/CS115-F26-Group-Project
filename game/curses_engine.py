@@ -23,6 +23,12 @@ class CursesEngine(GameEngine):
     """GameEngine subclass that renders in a curses split-pane layout."""
 
     def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        """Forward all arguments to :class:`~game.engine.GameEngine`.
+
+        Uses ``*args``/``**kwargs`` forwarding to avoid duplicating the parent
+        class parameter list — update :class:`~game.engine.GameEngine` and this
+        subclass stays in sync automatically.
+        """
         super().__init__(*args, **kwargs)
         self._log_lines: list[str] = []
         # Dimensions are set by _setup_windows(); defaults avoid crashes if
@@ -45,6 +51,11 @@ class CursesEngine(GameEngine):
     # ── curses run loop ────────────────────────────────────────────────────────
 
     def _curses_run(self, stdscr: curses.window) -> None:
+        """Main game loop executed inside the curses wrapper.
+
+        Called by :meth:`run` via :func:`curses.wrapper`; *stdscr* is the
+        full-screen window provided by curses.
+        """
         self._stdscr = stdscr
         curses.curs_set(1)
         if curses.has_colors():
@@ -86,6 +97,7 @@ class CursesEngine(GameEngine):
     # ── window setup ───────────────────────────────────────────────────────────
 
     def _setup_windows(self) -> None:
+        """Create and size the four curses sub-windows from the current terminal dimensions."""
         h, w = self._stdscr.getmaxyx()  # type: ignore[union-attr]
         self._w = w
         room_h = max(6, int(h * _ROOM_RATIO))
@@ -103,6 +115,7 @@ class CursesEngine(GameEngine):
     # ── display helpers ────────────────────────────────────────────────────────
 
     def _refresh_header(self) -> None:
+        """Redraw the top title/time bar."""
         win = self._header_win
         if win is None:
             return
@@ -129,6 +142,7 @@ class CursesEngine(GameEngine):
         self._refresh_log()
 
     def _refresh_log(self) -> None:
+        """Re-render the scrolling log panel, showing the most recent lines."""
         win = self._log_win
         if win is None:
             return
@@ -213,6 +227,7 @@ class CursesEngine(GameEngine):
     # ── input ──────────────────────────────────────────────────────────────────
 
     def _get_input(self) -> str:
+        """Draw the prompt, read one line of player input, and return it."""
         win = self._input_win
         if win is None:
             return ""
@@ -238,9 +253,10 @@ class CursesEngine(GameEngine):
     # ── end screen override ────────────────────────────────────────────────────
 
     def _handle_end(self) -> None:
+        """Log the appropriate end screen and wait for a keypress before exiting."""
         if self.state.won and self.state.time_remaining >= 300:
             end_lines = [
-                "YOU MADE IT TO ROOM 314 — FIVE MINUTES EARLY.",
+                "YOU MADE IT TO ROOM 314 \u2014 FIVE MINUTES EARLY.",
                 "The room is empty. The desks are empty. The exam",
                 "schedule on the door says the final isn't until TOMORROW.",
                 "You sit down anyway. You are very tired.",
@@ -250,6 +266,9 @@ class CursesEngine(GameEngine):
                 "YOU MADE IT TO ROOM 314!",
                 "The exam is already in progress, but you're here.",
             ]
+        elif self.state.quit:
+            # Farewell message was already logged by handle_quit; just confirm exit.
+            end_lines = []
         else:
             end_lines = [
                 "TIME'S UP.",
