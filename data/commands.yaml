@@ -99,6 +99,23 @@ responses:
 
   unknown: "I don't know how to '{verb}'."
 
+  help:
+    header: "Available commands:"
+    entries:
+      - "FORWARD / BACK / LEFT / RIGHT  — Move in that direction."
+      - "LOOK [item]                    — Describe the room, or examine an item."
+      - "EXAMINE [item]                 — Same as LOOK."
+      - "READ [item]                    — Read something (sign, mirror, etc.)."
+      - "LISTEN                         — Listen to ambient sounds."
+      - "SOAP HANDS                     — Apply soap from the dispenser."
+      - "RINSE HANDS / WASH HANDS       — Rinse your hands under the sink."
+      - "STOP                           — Pull your hands back from the sink."
+      - "OPEN [item]                    — Try to open a door or object."
+      - "KNOCK [item]                   — Knock on a door or object."
+      - "CHECK WATCH                    — See how much time you have left."
+      - "HELP                           — Show this message."
+      - "QUIT                           — Give up and exit."
+
   bathroom_status:
     clean: "The sink is off. Your hands are clean."
     soap_needed: >-

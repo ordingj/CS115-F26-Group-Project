@@ -4,11 +4,11 @@
       efficiency; this will be judged so we need to do a great job here
 
 - [x] extract all narrative text into yaml files and load them in at runtime to clean up the
-  code; also makes it easier to add new rooms/events/commands without touching code
+      code; also makes it easier to add new rooms/events/commands without touching code
   - [x] do the same for commands and events; don't hardcode any strings in the python,
-    reference the yaml data instead; use unambiguous keys to look up the right string for each
-    situation, so it's obvious when editing the yaml what each string is for and you don't have
-    to cross-reference with the code to understand the context
+        reference the yaml data instead; use unambiguous keys to look up the right string for
+        each situation, so it's obvious when editing the yaml what each string is for and you
+        don't have to cross-reference with the code to understand the context
 
 - [x] implement environmental clues for puzzles
   - [x] bathroom "You feel like you should wash your hands." if they try to leave without
@@ -21,7 +21,7 @@
         lyrics; the player has to identify the song and then choose the correct direction based
         on whether it's a left or right clue.
 
-- [ ] implement 'help' command that lists available commands and their syntax
+- [x] implement 'help' command that lists available commands and their syntax
 
 - [x] extract song titles/lyrics to yaml (`data/songs.yaml`); load in `game/puzzle.py`
 

@@ -378,10 +378,9 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     # ── help ───────────────────────────────────────────────────────────────────
     def handle_help(verb: str, target: str | None, state: GameState) -> str:
-        """List every registered command verb."""
-        engine = engine_ref[0]
-        verbs = engine.registry.known_verbs() if engine else []
-        return "Commands: " + ", ".join(verbs)
+        """Return a formatted list of available commands and their syntax."""
+        h = _CMD["help"]
+        return h["header"] + "\n" + "\n".join(f"  {e}" for e in h["entries"])
 
     registry.register("help", handle_help)
 

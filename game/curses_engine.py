@@ -138,8 +138,9 @@ class CursesEngine(GameEngine):
 
     def _log(self, msg: str) -> None:
         """Append a message to the log panel, wrapping long lines."""
-        wrapped = textwrap.wrap(msg, max(1, self._w - 1)) if msg.strip() else [""]
-        self._log_lines.extend(wrapped)
+        for part in msg.split("\n"):
+            wrapped = textwrap.wrap(part, max(1, self._w - 1)) if part.strip() else [""]
+            self._log_lines.extend(wrapped)
         self._refresh_log()
 
     def _refresh_log(self) -> None:
