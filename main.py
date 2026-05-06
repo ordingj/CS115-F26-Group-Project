@@ -48,6 +48,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     """
     registry = CommandRegistry()
 
+    def _route(exits: dict, correct: str, yes: str, no: str) -> None:
+        """Wire forward/left/right exits: *correct* direction → *yes*, others → *no*."""
+        for d in ("forward", "left", "right"):
+            exits[d] = yes if d == correct else no
+
     # ── movement ───────────────────────────────────────────────────────────────
     def handle_move(verb: str, target: str | None, state: GameState) -> str:
         """Move the player one step in *verb* direction.
@@ -105,14 +110,11 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             intersection = engine.rooms["intersection_4way"]
             # Build a 2–3 room wrong-way chain from the flavor pool so lost
             # players traverse several atmospheric rooms before looping back.
-            chain_len = random.randint(2, 3)
-            chain = random.sample(FLAVOR_ROOM_POOL, chain_len)
-            for i, room_id in enumerate(chain):
-                next_id = chain[i + 1] if i + 1 < chain_len else "intersection_4way"
+            chain = random.sample(FLAVOR_ROOM_POOL, random.randint(2, 3))
+            for room_id, next_id in zip(chain, chain[1:] + ["intersection_4way"]):
                 engine.rooms[room_id].exits["forward"] = next_id
             # Correct direction → 3-way intersection; wrong → start of chain.
-            for d in ("forward", "left", "right"):
-                intersection.exits[d] = "intersection_3way" if d == correct_dir else chain[0]
+            _route(intersection.exits, correct_dir, "intersection_3way", chain[0])
 
         # Bathroom entry: roll Step 2 mirror direction, start sink running.
         elif destination_id == "bathroom":
@@ -128,8 +130,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             exit_node = engine.rooms["intersection_3way_exit"]
             # The mirror clue direction leads toward the janitor hallway.
             # The wrong directions loop back through flavor rooms.
-            for d in ("forward", "left", "right"):
-                exit_node.exits[d] = "hallway_janitor" if d == mirror_dir else "flavor_copy_room"
+            _route(exit_node.exits, mirror_dir, "hallway_janitor", "flavor_copy_room")
 
         # Janitor hallway entry: roll Step 3 song clue on first visit;
         # wire exits and redirect the shared flavor room's forward exit back
@@ -140,8 +141,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
                 state.set_flag("step3_rolled")
             correct_dir = state.active_clues["step3_correct_dir"]
             janitor = engine.rooms["hallway_janitor"]
-            for d in ("forward", "left", "right"):
-                janitor.exits[d] = "hallway_final" if d == correct_dir else "flavor_copy_room"
+            _route(janitor.exits, correct_dir, "hallway_final", "flavor_copy_room")
             # Redirect wrong-way bounce destination back to janitor hallway.
             engine.rooms["flavor_copy_room"].exits["forward"] = "hallway_janitor"
 
@@ -182,7 +182,9 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
                 if state.has_flag("step2_hands_washed"):
                     return _CMD["look"]["sink_clean"]
                 if running:
-                    key = "sink_running_rinse" if phase in (0, 2) else "sink_running_stop"
+                    key = (
+                        "sink_running_rinse" if phase in (0, 2) else "sink_running_stop"
+                    )
                     return _CMD["look"][key]
                 return _CMD["look"]["sink_off"]
         engine.describe_current_room()
@@ -332,7 +334,9 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             # Mark song as heard regardless of whether it was freshly rolled.
             room.attributes["song_heard"] = True
             state.set_flag("step3_song_heard")
-            return _CMD["listen"]["janitor_prefix"] + f'\n  "{chorus}"'
+            # Indent each lyric line for clean display of multi-line choruses.
+            indented = "\n".join(f"  {line}" for line in chorus.strip().splitlines())
+            return _CMD["listen"]["janitor_prefix"] + "\n" + indented
         return _CMD["listen"]["silence"]
 
     registry.register("listen", handle_listen)

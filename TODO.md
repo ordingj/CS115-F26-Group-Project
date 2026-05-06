@@ -1,7 +1,24 @@
 # Project Tasklist
 
-- [x] code quality pass - add type annotations, docstrings, comments; refactor for clarity and
-  maintainability; this will be judged so we need to do a great job here
+- [x] code quality pass - look for opportunities to simplify, reduce complexity, and increase
+  efficiency; this will be judged so we need to do a great job here
+
+- [ ] extract all narrative text into yaml files and load them in at runtime to clean up the
+      code; also makes it easier to add new rooms/events/commands without touching code
+  - [ ] do the same for commands and events
+
+- [ ] implement environmental clues for puzzles
+  - [ ] bathroom "You feel like you should wash your hands." if they try to leave without
+        washing; "You should use soap." if they rinse without soap; "Your hands are still
+        soapy." if they don't rinse long enough. "Your hands are clean. You notice something on
+        the wall behind you in the mirror." if they do it right.
+  - [ ] janitor "The janitor is humming a song. You can't quite remember the title, but the
+        lyrics go something like..." (then show part of the chorus); show more of the lyrics as
+        the time gets lower; there is no interaction with the janitor, just the clue in the
+        lyrics; the player has to identify the song and then choose the correct direction based
+        on whether it's a left or right clue.
+
+- [ ] implement 'help' command that lists available commands and their syntax
 
 - [x] extract song titles/lyrics to yaml (`data/songs.yaml`); load in `game/puzzle.py`
 

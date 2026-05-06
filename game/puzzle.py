@@ -63,7 +63,7 @@ _STEP1_CLUE_TEMPLATES: dict[str, str] = {
     # Bake-sale sign: arrow points the correct way.
     "sign": (
         "A bright orange flyer is taped to the wall: "
-        "\"CS CLUB BAKE SALE – THIS WAY →\" "
+        '"CS CLUB BAKE SALE – THIS WAY →" '
         "with a hand-drawn arrow pointing {correct}."
     ),
     # Shadow: disappears around the corner in the correct direction.
@@ -81,6 +81,9 @@ _OPPOSITE: dict[str, str] = {
     "right": "left",
 }
 
+# Precomputed key list so step1_roll avoids rebuilding it on every roll.
+_STEP1_CLUE_TYPES: list[str] = list(_STEP1_CLUE_TEMPLATES)
+
 
 def step1_roll(state: GameState) -> None:
     """Randomly assign a new correct direction and clue type for the 4-way
@@ -88,7 +91,7 @@ def step1_roll(state: GameState) -> None:
     every time the player enters (or re-enters) the intersection.
     """
     correct_dir = random.choice(_STEP1_DIRS)
-    clue_type = random.choice(list(_STEP1_CLUE_TEMPLATES.keys()))
+    clue_type = random.choice(_STEP1_CLUE_TYPES)
     state.active_clues["step1_correct_dir"] = correct_dir
     state.active_clues["step1_clue_type"] = clue_type
 
@@ -128,8 +131,8 @@ def step2_mirror_text(state: GameState) -> str:
     # Backwards text effect: the mirror shows "TFEL OG" or "THGIR OG"
     backwards = ("GO " + direction.upper())[::-1]
     return (
-        f'The mirror is fogged from the sinks. You wipe a clear patch. '
-        f'Above the door frame, written in what looks like dry-erase marker, '
+        f"The mirror is fogged from the sinks. You wipe a clear patch. "
+        f"Above the door frame, written in what looks like dry-erase marker, "
         f'you can barely make out: "{backwards}" — backwards, of course. It says: GO {direction.upper()}.'
     )
 

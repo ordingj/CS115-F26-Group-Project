@@ -61,7 +61,7 @@ class CursesEngine(GameEngine):
         if curses.has_colors():
             curses.start_color()
             curses.use_default_colors()
-            curses.init_pair(1, curses.COLOR_CYAN, -1)   # room name
+            curses.init_pair(1, curses.COLOR_CYAN, -1)  # room name
             curses.init_pair(2, curses.COLOR_YELLOW, -1)  # event markers (reserved)
             curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)  # header bar
 
@@ -178,19 +178,10 @@ class CursesEngine(GameEngine):
                 lines.append("")
                 lines.extend(textwrap.wrap(clue, inner_w))
         elif room.room_id == "bathroom":
-            lines.append("")
-            phase = room.attributes.get("wash_phase", 0)
-            running = room.attributes.get("sink_running", False)
-            if self.state.has_flag("step2_hands_washed"):
-                lines.append("The sink is off. Your hands are clean.")
-            elif running and phase == 0:
-                lines.append("The motion-sensor sink is running. (Try: RINSE HANDS)")
-            elif not running and phase == 1:
-                lines.append("The water cut off. Hands still soapy. (Try: STOP)")
-            elif running and phase == 2:
-                lines.append("Water came back — rinse quickly! (Try: RINSE HANDS)")
-            elif running and phase == 3:
-                lines.append("Water still running. Hands clean. (Try: STOP)")
+            status = self._bathroom_status()
+            if status:
+                lines.append("")
+                lines.extend(textwrap.wrap(status, inner_w))
 
         exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:
@@ -240,9 +231,11 @@ class CursesEngine(GameEngine):
         curses.echo()
         curses.nocbreak()
         try:
-            raw = win.getstr(0, 2, min(78, max(1, self._w - 4))).decode(
-                "utf-8", errors="replace"
-            ).strip()
+            raw = (
+                win.getstr(0, 2, min(78, max(1, self._w - 4)))
+                .decode("utf-8", errors="replace")
+                .strip()
+            )
         except Exception:
             raw = ""
         finally:

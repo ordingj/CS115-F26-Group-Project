@@ -4,81 +4,171 @@
 
 songs:
   - direction: left
-    title: "One Step Left"
-    chorus: "One step left, then you're home."
+    title: "I Left My Heart in San Francisco"
+    chorus: |
+      I left my heart in San Francisco
+      High on a hill, it calls to me
+      To be where little cable cars climb halfway to the stars
+      The morning fog may chill the air, I don't care
 
   - direction: left
-    title: "Turn to the Left"
-    chorus: "Turn to the left, don't look back."
+    title: "Left Outside Alone"
+    chorus: |
+      And I feel-
+      And I feel like I'm left outside alone
+      When I'm dead and gone
+      Will I be in your thoughts?
+      Maybe you'll miss me then
 
   - direction: left
-    title: "Left Side of the Road"
-    chorus: "Always on the left side of the road."
+    title: "What's Left of Me"
+    chorus: |
+      Now I'm broken
+      Heart's wide open
+      Finally I'm feeling alive
+      I'm barely breathing with you by my side
+      I'm calling your name
+      Out in the rain
+      I'm giving you what's left of me
 
   - direction: left
-    title: "Left Behind"
-    chorus: "You left me left behind."
+    title: "Left to My Own Devices"
+    chorus: |
+      I left to my own devices, I probably would
+      I left to my own devices, I probably would
+      Pick up a book or a magazine
+      To pass the time in a dream
 
   - direction: left
-    title: "Take a Left"
-    chorus: "Take a left at the end of the hall."
+    title: "Nothing Left to Lose"
+    chorus: |
+      And I've got nothing left to lose
+      No, I've got nothing left to lose
+      I'm on the edge of something new
+      With nothing left to lose
+
+  - direction: left
+    title: "I Left My Wallet in El Segundo"
+    chorus: |
+      I left my wallet in El Segundo
+      Left my wallet in El Segundo
+      I left my wallet in El Segundo
+      I gotta get it, I got-gotta get it
 
   - direction: left
     title: "Left of Center"
-    chorus: "I live just to the left of center."
-
-  - direction: left
-    title: "Keep Left"
-    chorus: "Keep left, keep left, keep left 'til the end."
-
-  - direction: left
-    title: "The Left Hand Path"
-    chorus: "Walk the left hand path with me."
-
-  - direction: left
-    title: "Left Turn Only"
-    chorus: "Left turn only, no going back."
+    chorus: |
+      If you want me, you can find me
+      Left of center, off of the strip
+      In the outskirts and in the fringes
+      In the corner, out in the grip
 
   - direction: left
     title: "Left in the Dark"
-    chorus: "Left in the dark, and I can't find the light."
+    chorus: |
+      But don't leave me in the dark
+      No, don't leave me in the dark
+      It's getting so much harder just to keep it all inside
+      I want to know the truth tonight
+
+  - direction: left
+    title: "My Baby Left Me"
+    chorus: |
+      Yes, my baby left me
+      Never said a word
+      Was it something I done
+      Or something that she heard?
+
+  - direction: left
+    title: "The Girl I Left Behind Me"
+    chorus: |
+      But now I'm bound for Brighton camp
+      Kind Heaven, then pray guide me
+      And send me safely back again
+      To the girl I left behind me
 
   - direction: right
-    title: "Turn Right"
-    chorus: "Turn right when the hallway forks."
+    title: "Right Round"
+    chorus: |
+      You spin my head right round, right round
+      When you go down, when you go down, down
+      You spin my head right round, right round
+      When you go down, when you go down, down
 
   - direction: right
     title: "Right Here Waiting"
-    chorus: "Right here waiting, right here for you."
+    chorus: |
+      Wherever you go, whatever you do
+      I will be right here waiting for you
+      Whatever it takes, or how my heart breaks
+      I will be right here waiting for you
 
   - direction: right
-    title: "Right Side of History"
-    chorus: "Standing on the right side of history."
+    title: "Right Now"
+    chorus: |
+      Right now, hey! It's your tomorrow
+      Right now, come on, it's everything
+      Right now, catch your magic moment
+      Do it right here and now, it means everything
 
   - direction: right
-    title: "Dead Right"
-    chorus: "Dead right, dead right, you know I'm right."
+    title: "The Right Stuff"
+    chorus: |
+      Oh, oh, oh, oh, oh
+      The right stuff
+      Oh, oh, oh, oh, oh
+      The right stuff
+      First time was a great time, second time was a blast
+      Third time I fell in love, now I hope it lasts
 
   - direction: right
-    title: "Two Rights"
-    chorus: "Two rights make a wrong, but one right gets you home."
+    title: "Right Back Where We Started From"
+    chorus: |
+      Ooh, and it's alright and it's coming along
+      We're gonna get it on together
+      Ooh, and it's alright, it's a-coming along
+      Right back where we started from
 
   - direction: right
-    title: "Right Around the Corner"
-    chorus: "It's right around the corner, just stay on course."
+    title: "Feels So Right"
+    chorus: |
+      And it feels so right, so right
+      No one can deny it
+      And it feels so right, so right
+      And I don't want to fight it
 
   - direction: right
-    title: "Always Right"
-    chorus: "Always right, even when I'm wrong."
+    title: "Right Hand Man"
+    chorus: |
+      Lookin' for a mind at work (work!)
+      I'm lookin' for a mind at work (work!)
+      I'm lookin' for a mind at work (work!)
+      Whoa!
+      (I am not throwin' away my shot!)
 
   - direction: right
-    title: "Hard Right"
-    chorus: "Hard right, hard right, commit to the turn."
+    title: "Do It Right"
+    chorus: |
+      If you're gonna do it, do it right, right
+      Do it with me
+      If you're gonna do it, do it right, right
+      Do it with me
 
   - direction: right
-    title: "Right Place Wrong Time"
-    chorus: "Right place, wrong time, story of my life."
+    title: "Treat You Right"
+    chorus: |
+      I know I can treat you better
+      Than he can
+      And any girl like you deserves a gentleman
+      Tell me why are we wasting time
+      On all your wasted crying
+      When you should be with me instead
+      I know I can treat you right
 
   - direction: right
-    title: "Right as Rain"
-    chorus: "Right as rain and twice as cold."
+    title: "Right As Rain"
+    chorus: |
+      Who wants to be right as rain?
+      It's better when something is wrong
+      You get me up and then I'm back again
+      You're the one that keeps me moving on

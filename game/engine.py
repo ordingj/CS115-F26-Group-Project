@@ -82,24 +82,9 @@ class GameEngine:
                 print(f"\n{clue}")
         # Show sink status in bathroom.
         elif room.room_id == "bathroom":
-            phase = room.attributes.get("wash_phase", 0)
-            running = room.attributes.get("sink_running", False)
-            if self.state.has_flag("step2_hands_washed"):
-                print("\nThe sink is off. Your hands are clean.")
-            elif running and phase == 0:
-                print("\nThe motion-sensor sink is running. (Try: RINSE HANDS)")
-            elif not running and phase == 1:
-                print(
-                    "\nThe water cut off. Your hands are still soapy. "
-                    "(Try: STOP to pull your hands back)"
-                )
-            elif running and phase == 2:
-                print(
-                    "\nThe water came back on. Quick — rinse again before it cuts off. "
-                    "(Try: RINSE HANDS)"
-                )
-            elif running and phase == 3:
-                print("\nThe water is still running. Your hands are clean. (Try: STOP)")
+            status = self._bathroom_status()
+            if status:
+                print(f"\n{status}")
         exits = [d for d, dest in room.exits.items() if dest is not None]
         if exits:
             print(f"Exits: {', '.join(exits)}")
@@ -108,6 +93,35 @@ class GameEngine:
         print(f"Time remaining: {self.state.formatted_time()}")
 
     # ── private helpers ────────────────────────────────────────────────────────
+
+    def _bathroom_status(self) -> str:
+        """Return the current sink/handwashing status line for the bathroom room.
+
+        Returns an empty string when the bathroom is not the current room or
+        when no status line is appropriate.
+        """
+        room = self.current_room()
+        if room is None or room.room_id != "bathroom":
+            return ""
+        phase = room.attributes.get("wash_phase", 0)
+        running = room.attributes.get("sink_running", False)
+        if self.state.has_flag("step2_hands_washed"):
+            return "The sink is off. Your hands are clean."
+        if running and phase == 0:
+            return "The motion-sensor sink is running. (Try: RINSE HANDS)"
+        if not running and phase == 1:
+            return (
+                "The water cut off. Your hands are still soapy. "
+                "(Try: STOP to pull your hands back)"
+            )
+        if running and phase == 2:
+            return (
+                "The water came back on. Quick — rinse again before it cuts off. "
+                "(Try: RINSE HANDS)"
+            )
+        if running and phase == 3:
+            return "The water is still running. Your hands are clean. (Try: STOP)"
+        return ""
 
     def _print_intro(self) -> None:
         """Print the one-time opening title card and story hook."""

@@ -1,12 +1,20 @@
 ## 2026-05-06
 
-- Code quality pass: added comprehensive docstrings to all public functions and
-  methods across `game/state.py`, `game/command.py`, `game/event.py`,
-  `game/engine.py`, `game/curses_engine.py`, and `main.py`, covering parameters,
-  return values, and notable edge-case behaviour. Also fixed a latent bug in
-  `CursesEngine._handle_end()` where the voluntary-quit branch was missing,
-  causing the curses UI to show the "TIME'S UP" losing screen after a graceful
-  `quit` (mirroring the plain-text fix from the previous session).
+- Simplification pass: precomputed `_STEP1_CLUE_TYPES` in `puzzle.py` to avoid
+  rebuilding the key list on every puzzle roll; extracted `_bathroom_status()` helper in
+  `engine.py`, eliminating the duplicated inline logic in `curses_engine.py` and normalising
+  the status messages across both UIs; added `_route()` helper in `main.py` for the repeated
+  3-direction exit-wiring pattern; simplified flavor-chain wiring with `zip` instead of
+  manual `enumerate` + conditional indexing; fixed `handle_listen` chorus display to indent
+  each lyric line individually, correcting broken output for multi-line YAML block-scalar
+  choruses.
+
+- Code quality pass: added comprehensive docstrings to all public functions and methods across
+  `game/state.py`, `game/command.py`, `game/event.py`, `game/engine.py`,
+  `game/curses_engine.py`, and `main.py`, covering parameters, return values, and notable
+  edge-case behaviour. Also fixed a latent bug in `CursesEngine._handle_end()` where the
+  voluntary-quit branch was missing, causing the curses UI to show the "TIME'S UP" losing
+  screen after a graceful `quit` (mirroring the plain-text fix from the previous session).
 
 ## 2026-05-05
 
