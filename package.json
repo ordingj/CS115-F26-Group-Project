@@ -1,7 +1,7 @@
 {
   "name": "cs115-f26-group-project",
   "private": true,
-  "description": "Final Exam: Room 314 – text adventure game",
+  "description": "Final Exam: Room 314 - a text adventure game",
   "devDependencies": {
     "prettier": "^3.8.3"
   }

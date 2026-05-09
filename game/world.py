@@ -15,33 +15,77 @@ Rooms are tagged with a ``type`` field in the YAML:
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import Any, TypedDict, cast
 
-import yaml
-
+from game import load_yaml_data
 from game.room import Room
 
-_DATA_FILE = Path(__file__).parent.parent / "data" / "rooms.yaml"
+
+class _RequiredRoomEntry(TypedDict):
+    """Required keys that every rooms.yaml entry must provide."""
+
+    room_id: str
+    name: str
+    description: str
+
+
+class _RoomEntry(_RequiredRoomEntry, total=False):
+    """Typed representation of a single rooms.yaml entry.
+
+    Inherits the required fields from :class:`_RequiredRoomEntry` and adds
+    optional fields (``total=False`` means no field is required here).
+    """
+
+    exits: dict[str, str | None]
+    items: dict[str, str]
+    attributes: dict[str, Any]
+    type: str
+
+
+class _RoomsFile(TypedDict):
+    """Typed representation of the rooms.yaml document root.
+
+    The YAML file is expected to have a top-level ``rooms`` key containing
+    a list of room entry mappings.
+    """
+
+    rooms: list[_RoomEntry]
+
 
 # ── loader ─────────────────────────────────────────────────────────────────────
 
 
 def _load_rooms() -> tuple[list[Room], list[str]]:
-    """Parse rooms.yaml and return (all_rooms, flavor_room_ids)."""
-    raw: dict = yaml.safe_load(_DATA_FILE.read_text(encoding="utf-8"))
+    """Parse ``data/rooms.yaml`` and return all rooms plus the flavor room IDs.
+
+    Called once at module import time.  The results are cached in
+    ``_ALL_ROOMS`` and ``FLAVOR_ROOM_POOL``; every subsequent
+    :func:`build_world` call clones from those cached templates rather than
+    re-parsing the YAML.
+
+    Returns
+    -------
+    tuple[list[Room], list[str]]
+        A 2-tuple of ``(all_room_objects, flavor_room_id_list)``.
+    """
+    raw = cast(_RoomsFile, load_yaml_data("rooms.yaml"))
     all_rooms: list[Room] = []
     flavor_ids: list[str] = []
     for entry in raw["rooms"]:
-        room_type = entry.pop("type", "structural")
+        # Default to "structural" for rooms that omit the optional type field.
+        room_type = entry.get("type", "structural")
         room = Room(
             room_id=entry["room_id"],
             name=entry["name"],
             description=entry["description"],
+            # Use empty dict as fallback when the field is absent or null.
             exits=entry.get("exits") or {},
             items=entry.get("items") or {},
             attributes=entry.get("attributes") or {},
         )
         all_rooms.append(room)
+        # Collect flavor room IDs for the wrong-way detour pool used by
+        # movement_routing.py when a player picks the wrong direction.
         if room_type == "flavor":
             flavor_ids.append(room.room_id)
     return all_rooms, flavor_ids
@@ -53,12 +97,16 @@ _ALL_ROOMS, FLAVOR_ROOM_POOL = _load_rooms()
 
 
 def build_world() -> dict[str, Room]:
-    """Return the complete room dictionary keyed by room_id.
+    """Return the complete room dictionary keyed by ``room_id``.
 
-    Each call reloads from the module-level cache (``_ALL_ROOMS``), which was
-    populated once at import time from ``data/rooms.yaml``.  Room attribute
-    dicts are shared across calls, so callers that mutate attributes (e.g. the
-    bathroom puzzle) will see their changes reflected on re-entry — which is the
-    correct behaviour for a single game session.
+    Each call clones the module-level room templates loaded from
+    ``data/rooms.yaml`` at import time, so per-session mutations to exits or
+    attributes (e.g. puzzle exit rewiring, bathroom wash-phase counters) do
+    not leak into later calls to :func:`build_world` or other game sessions.
+
+    Returns
+    -------
+    dict[str, Room]
+        Mapping of ``room_id`` → fresh :class:`~game.room.Room` clone.
     """
-    return {room.room_id: room for room in _ALL_ROOMS}
+    return {room.room_id: room.clone() for room in _ALL_ROOMS}

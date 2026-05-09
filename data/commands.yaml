@@ -10,6 +10,9 @@ responses:
   move:
     no_exit: "You can't go that way."
     blocked: "That way is blocked."
+    lobby_forward_blocked:
+      "There isn't anyone around, but the hallway is thoroughly blocked off."
+    lobby_back_blocked: "You can't run from your problems, you need to take your final."
     hands_not_washed: "You feel like you should wash your hands."
     hands_still_soapy: "Your hands are still soapy. You should rinse them off first."
     wrong_4way:
@@ -31,7 +34,7 @@ responses:
 
   read:
     no_target: "Read what?"
-    detour_sign: "The sign reads: DETOUR \u2192 (an arrow points down the forward hallway)."
+    detour_sign: "The sign reads: DETOUR \u2190 (an arrow points down the left hallway)."
     mirror_fogged: "The mirror is too fogged to read anything on it."
     generic: "You read the {item}, but the text is hard to make out."
     not_here: "There is no '{target}' here to read."
@@ -92,7 +95,19 @@ responses:
 
   check:
     watch: "Your watch reads {time} remaining."
+    phone: "No signal. Battery at 3%. A calendar notification reads: FINAL EXAM TODAY."
     other: "You check the {target}, but find nothing useful."
+
+  inventory:
+    list_prefix: "You're carrying:"
+    empty: "You have nothing on you. How did that happen."
+    drop: "You should probably hang onto that."
+    backpack: "You don't have time for that right now."
+    phone: "You don't have time for that right now."
+    keys: "How will that help you find Room 314?"
+    wallet: "How will that help you find Room 314?"
+    watch: "Your watch reads {time} remaining."
+    not_carrying: "You don't have a {target}."
 
   quit:
     farewell: "You give up and head home. Game over."
@@ -113,6 +128,7 @@ responses:
       - "OPEN [item]                    — Try to open a door or object."
       - "KNOCK [item]                   — Knock on a door or object."
       - "CHECK WATCH                    — See how much time you have left."
+      - "INVENTORY / I                  — List items you are carrying."
       - "HELP                           — Show this message."
       - "QUIT                           — Give up and exit."
 
@@ -133,6 +149,13 @@ responses:
     janitor_hint_prefix: "The janitor is humming. You catch a few lyrics:"
 
   intro:
+    ascii_art: |-
+      __________________
+      /_____ROOM_314____/|
+      |                | |
+      |  FIND YOUR     | |
+      |  CLASSROOM     | /
+      |________________|/
     title: "FINAL EXAM: ROOM 314"
     opening: "Your final exam starts in 10 minutes."
     problem: "The problem: you can't find the classroom."
@@ -141,6 +164,18 @@ responses:
       late."
     curses_subtitle: "Your final exam starts in 10 minutes. Find Room 314."
     help_hint: "Type HELP for a list of commands."
+
+  # ── curses UI panel labels ─────────────────────────────────────────────────
+  # These strings appear as visible labels in the curses split-pane interface.
+  # Changing them here updates all panel headings without touching Python code.
+  ui_labels:
+    header_time_prefix: "Time: "
+    panel_room: "LOCATION"
+    panel_log: "ACTIVITY"
+    section_details: "DETAILS"
+    section_clue: "CLUE"
+    section_exits: "EXITS"
+    section_items: "YOU NOTICE"
 
   end:
     won_early: |-

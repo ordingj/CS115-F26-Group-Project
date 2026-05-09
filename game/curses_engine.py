@@ -12,25 +12,62 @@ from __future__ import annotations
 import curses
 import textwrap
 
-from game.engine import GameEngine, _UI
-from game.puzzle import step1_clue_text
+from game.command import CommandRegistry
+from game.curses_rendering import (
+    COLOR_HEADER,
+    COLOR_PROMPT,
+    PANEL_PAD,
+    build_room_lines,
+    build_system_line_set,
+    classify_log_line,
+    color_attr,
+    init_colors,
+    log_attr,
+    render_boxed_panel,
+    room_attr,
+)
+from game.engine import GameEngine, UI
+from game.event import EventQueue
+from game.room import Room
+from game.state import GameState
 
 # Fraction of the terminal height devoted to the room panel.
-_ROOM_RATIO = 0.40
+_ROOM_RATIO = 0.48
 
 
 class CursesEngine(GameEngine):
-    """GameEngine subclass that renders in a curses split-pane layout."""
+    """GameEngine subclass that renders in a curses split-pane layout.
 
-    def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
-        """Forward all arguments to :class:`~game.engine.GameEngine`.
+    The terminal is divided (top to bottom) into a 1-line header, a room
+    panel, a scrolling log panel, and a 1-line input bar.  All game logic
+    lives in the parent :class:`~game.engine.GameEngine`; this class only
+    overrides the I/O methods.
+    """
 
-        Uses ``*args``/``**kwargs`` forwarding to avoid duplicating the parent
-        class parameter list — update :class:`~game.engine.GameEngine` and this
-        subclass stays in sync automatically.
+    def __init__(
+        self,
+        rooms: dict[str, Room],
+        state: GameState,
+        registry: CommandRegistry,
+        event_queue: EventQueue,
+    ) -> None:
+        """Initialise the curses engine, forwarding all arguments to the parent.
+
+        Parameters
+        ----------
+        rooms : dict[str, Room]
+            Mapping of ``room_id`` → :class:`~game.room.Room`.
+        state : GameState
+            Mutable game state for this session.
+        registry : CommandRegistry
+            Populated command registry.
+        event_queue : EventQueue
+            Ambient event queue.
         """
-        super().__init__(*args, **kwargs)
-        self._log_lines: list[str] = []
+        super().__init__(rooms, state, registry, event_queue)
+        self._log_lines: list[tuple[str, str]] = []
+        self._system_lines = build_system_line_set()
+        self._pending_transition: bool = False
         # Dimensions are set by _setup_windows(); defaults avoid crashes if
         # a helper is called before the curses loop starts.
         self._w: int = 80
@@ -45,7 +82,11 @@ class CursesEngine(GameEngine):
     # ── public API override ────────────────────────────────────────────────────
 
     def run(self) -> None:
-        """Start the game inside a curses wrapper for automatic cleanup."""
+        """Start the game inside :func:`curses.wrapper` for automatic cleanup.
+
+        :func:`curses.wrapper` saves/restores terminal state and calls
+        :meth:`_curses_run` with the root ``stdscr`` window.
+        """
         curses.wrapper(self._curses_run)
 
     # ── curses run loop ────────────────────────────────────────────────────────
@@ -53,23 +94,26 @@ class CursesEngine(GameEngine):
     def _curses_run(self, stdscr: curses.window) -> None:
         """Main game loop executed inside the curses wrapper.
 
-        Called by :meth:`run` via :func:`curses.wrapper`; *stdscr* is the
-        full-screen window provided by curses.
+        Called by :meth:`run` via :func:`curses.wrapper`.  Mirrors the
+        parent's :meth:`~game.engine.GameEngine.run` loop but routes all
+        output through the curses panel helpers instead of ``print``.
+
+        Parameters
+        ----------
+        stdscr : curses.window
+            Full-screen window provided by :func:`curses.wrapper`.
         """
         self._stdscr = stdscr
         curses.curs_set(1)
-        if curses.has_colors():
-            curses.start_color()
-            curses.use_default_colors()
-            curses.init_pair(1, curses.COLOR_CYAN, -1)  # room name
-            curses.init_pair(2, curses.COLOR_YELLOW, -1)  # event markers (reserved)
-            curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)  # header bar
+        if self._supports_color():
+            init_colors()
 
         self._setup_windows()
 
         # Intro messages logged before the first room description.
-        intro = _UI["intro"]
-        self._log(intro["title"])
+        intro = UI["intro"]
+        for line in self._intro_banner_lines():
+            self._log(line)
         self._log(intro["curses_subtitle"])
         self._log(intro["help_hint"])
         self._log("")
@@ -78,7 +122,7 @@ class CursesEngine(GameEngine):
 
         while not self.state.game_over:
             for msg in self.event_queue.tick(self.state):
-                self._log("[!] " + msg)
+                self._log(msg, style="event")
             self._refresh_header()
 
             raw = self._get_input()
@@ -98,7 +142,15 @@ class CursesEngine(GameEngine):
     # ── window setup ───────────────────────────────────────────────────────────
 
     def _setup_windows(self) -> None:
-        """Create and size the four curses sub-windows from the current terminal dimensions."""
+        """Create and size the four curses sub-windows from current terminal dimensions.
+
+        Window layout (rows, from top):
+
+        - **Row 0**: 1-row header (title + time remaining).
+        - **Rows 1…room_h**: room panel (name, description, clue, exits, items).
+        - **Rows room_h+1…h-2**: log panel (event messages, command results).
+        - **Row h-1**: 1-row input bar (prompt + player typing area).
+        """
         h, w = self._stdscr.getmaxyx()  # type: ignore[union-attr]
         self._w = w
         room_h = max(6, int(h * _ROOM_RATIO))
@@ -116,19 +168,21 @@ class CursesEngine(GameEngine):
     # ── display helpers ────────────────────────────────────────────────────────
 
     def _refresh_header(self) -> None:
-        """Redraw the top title/time bar."""
+        """Redraw the top title/time bar with the current time remaining."""
         win = self._header_win
         if win is None:
             return
         win.erase()
-        title = "  FINAL EXAM: ROOM 314"
-        time_str = "Time: " + self.state.formatted_time() + "  "
+        labels = UI["ui_labels"]
+        title = "  " + UI["intro"]["title"]
+        time_str = labels["header_time_prefix"] + self.state.formatted_time() + "  "
         gap = max(0, self._w - len(title) - len(time_str))
         line = title + " " * gap + time_str
         try:
+            supports_color = self._supports_color()
             attr = (
-                curses.color_pair(3) | curses.A_BOLD
-                if curses.has_colors()
+                color_attr(supports_color, COLOR_HEADER, bold=True)
+                if supports_color
                 else curses.A_REVERSE
             )
             win.addstr(0, 0, line[: self._w], attr)
@@ -136,103 +190,144 @@ class CursesEngine(GameEngine):
             pass
         win.refresh()
 
-    def _log(self, msg: str) -> None:
-        """Append a message to the log panel, wrapping long lines."""
+    def _log(self, msg: str, *, style: str | None = None) -> None:
+        """Append *msg* to the scrolling log panel, wrapping long lines.
+
+        Parameters
+        ----------
+        msg : str
+            Message to append.  Multi-line strings are split on ``\\n``;
+            each segment is word-wrapped independently.
+        style : str or None, optional
+            Explicit style tag (e.g. ``"event"``).  When ``None``,
+            :func:`~game.curses_rendering.classify_log_line` infers the
+            style from the line's content.
+        """
+        inner_w = max(1, self._w - (PANEL_PAD * 2))
         for part in msg.split("\n"):
-            wrapped = textwrap.wrap(part, max(1, self._w - 1)) if part.strip() else [""]
-            self._log_lines.extend(wrapped)
+            line_style = (
+                style
+                if style is not None
+                else classify_log_line(part, self._system_lines)
+            )
+            subsequent_indent = ""
+            if line_style == "event":
+                subsequent_indent = "    "
+            elif line_style == "command":
+                subsequent_indent = "  "
+            wrapped = (
+                textwrap.wrap(part, inner_w, subsequent_indent=subsequent_indent)
+                if part.strip()
+                else [""]
+            )
+            self._log_lines.extend((line_style, line) for line in wrapped)
         self._refresh_log()
 
     def _refresh_log(self) -> None:
-        """Re-render the scrolling log panel, showing the most recent lines."""
-        win = self._log_win
-        if win is None:
-            return
-        win.erase()
-        visible = self._log_lines[-self._log_h :]
-        for row, line in enumerate(visible):
-            if row >= self._log_h:
-                break
-            try:
-                win.addstr(row, 0, line[: self._w - 1])
-            except curses.error:
-                pass
-        win.refresh()
+        """Re-render the scrolling log panel, showing only the most recent lines."""
+        inner_w = max(1, self._w - (PANEL_PAD * 2))
+        inner_h = max(0, self._log_h - 2)
+        visible = self._log_lines[-inner_h:]
+        supports_color = self._supports_color()
+        render_boxed_panel(
+            self._log_win,
+            UI["ui_labels"]["panel_log"],
+            visible,
+            inner_w=inner_w,
+            height=self._log_h,
+            supports_color=supports_color,
+            attr_for_style=lambda style: log_attr(style, supports_color),
+        )
+
+    def _supports_color(self) -> bool:
+        """Return ``True`` when curses colour output is currently available.
+
+        Returns
+        -------
+        bool
+            Result of :func:`curses.has_colors`, or ``False`` if curses
+            raises an error (e.g. when not in a curses context).
+        """
+        try:
+            return curses.has_colors()
+        except curses.error:
+            return False
+
+    def signal_transition(self) -> None:
+        """Arm the fade-to-black transition for the next room description.
+
+        Sets ``_pending_transition`` so :meth:`describe_current_room` will
+        call :meth:`_fade_transition` before re-drawing the room panel.
+        """
+        self._pending_transition = True
 
     # ── room display override ──────────────────────────────────────────────────
 
+    def _fade_transition(self) -> None:
+        """Briefly blank the room and log panels to simulate a room transition.
+
+        Erases both panels and pauses for ~120 ms before returning so the
+        caller can redraw with new content — producing a simple cut-to-black
+        effect without requiring animation support.
+        """
+        for win in (self._room_win, self._log_win):
+            if win is not None:
+                try:
+                    win.erase()
+                    win.refresh()
+                except curses.error:
+                    pass
+        curses.napms(120)
+
     def describe_current_room(self) -> None:
-        """Render the current room in the upper panel."""
-        room = self.current_room()
-        if room is None:
+        """Render the current room in the upper room panel.
+
+        If a transition was signalled by :meth:`signal_transition`, performs
+        the fade-to-black before re-drawing.
+        """
+        if self._pending_transition:
+            self._pending_transition = False
+            self._fade_transition()
+        room_view = self._current_room_view()
+        if room_view is None:
             return
 
-        inner_w = max(1, self._w - 4)  # 2 border cols + 2 padding cols
-        lines: list[str] = []
-        lines.append(f"[ {room.name} ]")
-        lines.append("")
-        lines.extend(textwrap.wrap(room.description, inner_w))
-
-        # Puzzle-specific inline hints (mirrors the plain-text engine logic).
-        if room.room_id == "intersection_4way":
-            clue = step1_clue_text(self.state)
-            if clue:
-                lines.append("")
-                lines.extend(textwrap.wrap(clue, inner_w))
-        elif room.room_id == "bathroom":
-            status = self._bathroom_status()
-            if status:
-                lines.append("")
-                lines.extend(textwrap.wrap(status, inner_w))
-        elif room.room_id == "hallway_janitor":
-            hint = self._janitor_hint()
-            if hint:
-                lines.append("")
-                for hline in hint.splitlines():
-                    lines.extend(textwrap.wrap(hline, inner_w) or [""])
-
-        exits = [d for d, dest in room.exits.items() if dest is not None]
-        if exits:
-            lines.append("")
-            lines.append(f"Exits: {', '.join(exits)}")
-        if room.items:
-            lines.append(f"You see: {', '.join(room.items.values())}")
-
-        win = self._room_win
-        if win is None:
-            return
-        win.erase()
-        try:
-            win.border()
-        except curses.error:
-            pass
-        for row, line in enumerate(lines):
-            if row >= self._room_h - 2:
-                break
-            try:
-                attr = curses.A_NORMAL
-                if row == 0:
-                    attr = (
-                        curses.color_pair(1) | curses.A_BOLD
-                        if curses.has_colors()
-                        else curses.A_BOLD
-                    )
-                win.addstr(row + 1, 2, line[:inner_w], attr)
-            except curses.error:
-                pass
-        win.refresh()
+        inner_w = max(1, self._w - (PANEL_PAD * 2))
+        lines = build_room_lines(room_view, inner_w)
+        supports_color = self._supports_color()
+        render_boxed_panel(
+            self._room_win,
+            UI["ui_labels"]["panel_room"],
+            lines,
+            inner_w=inner_w,
+            height=self._room_h,
+            supports_color=supports_color,
+            attr_for_style=lambda style: room_attr(style, supports_color),
+        )
         self._refresh_header()
 
     # ── input ──────────────────────────────────────────────────────────────────
 
     def _get_input(self) -> str:
-        """Draw the prompt, read one line of player input, and return it."""
+        """Draw the prompt in the input bar, read one line of player input, and return it.
+
+        Returns
+        -------
+        str
+            The raw input string (stripped), or ``""`` on any error.
+        """
         win = self._input_win
         if win is None:
             return ""
         win.erase()
         try:
-            win.addstr(0, 0, "> ")
+            prompt_attr = color_attr(
+                self._supports_color(),
+                COLOR_PROMPT,
+                fallback=curses.A_REVERSE,
+                bold=True,
+            )
+            win.addstr(0, 0, "> ", prompt_attr)
         except curses.error:
             pass
         win.refresh()
@@ -255,23 +350,14 @@ class CursesEngine(GameEngine):
 
     def _handle_end(self) -> None:
         """Log the appropriate end screen and wait for a keypress before exiting."""
-        end = _UI["end"]
-        if self.state.won and self.state.time_remaining >= 300:
-            end_lines = end["won_early"].splitlines()
-        elif self.state.won:
-            end_lines = end["won"].splitlines()
-        elif self.state.quit:
-            # Farewell message was already logged by handle_quit; just confirm exit.
-            end_lines = []
-        else:
-            end_lines = end["lost"].splitlines()
+        end_lines = self._end_lines() or []
 
         self._log("")
         self._log("=" * max(1, self._w - 2))
         for line in end_lines:
             self._log(line)
         self._log("=" * max(1, self._w - 2))
-        self._log(_UI["end"]["press_any_key"])
+        self._log(UI["end"]["press_any_key"])
 
         if self._input_win:
             self._input_win.erase()

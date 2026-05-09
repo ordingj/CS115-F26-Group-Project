@@ -1,25 +1,68 @@
-"""GameEngine – main game loop and room rendering."""
+"""GameEngine – main game loop and room rendering for the plain-text UI.
+
+This module provides :class:`GameEngine`, the primary game driver used when
+curses is unavailable or the ``--no-curses`` flag is passed.  The curses
+variaint (:class:`~game.curses_engine.CursesEngine`) inherits from it and
+overrides only the presentation methods, keeping game-loop logic DRY.
+"""
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any
 
-import yaml
-
+from game import load_yaml_data
+from game.bathroom import bathroom_status_text
 from game.command import CommandParser, CommandRegistry
 from game.event import EventQueue
+from game.janitor import janitor_hint_text
 from game.puzzle import step1_clue_text
 from game.room import Room
 from game.state import GameState
 
-_UI: dict = yaml.safe_load(
-    (Path(__file__).parent.parent / "data" / "commands.yaml").read_text(encoding="utf-8")
-)["responses"]
+UI: dict[str, Any] = load_yaml_data("commands.yaml")["responses"]
+
+
+@dataclass(frozen=True)
+class CurrentRoomView:
+    """Immutable snapshot of room-presentation data consumed by both UI layers.
+
+    Computed once per describe cycle so the plain-text and curses renderers
+    both show identical information without re-evaluating the game state twice.
+
+    Attributes
+    ----------
+    name : str
+        Room display name (e.g. ``"Building Lobby"``).
+    description : str
+        Full prose description of the room.
+    clue : str
+        Dynamic clue string (puzzle hint, bathroom status, janitor lyric), or
+        an empty string when no clue applies.
+    exits : tuple[str, ...]
+        Direction names for all currently accessible exits.
+    items : tuple[str, ...]
+        Display names of items visible in the room.
+    time_remaining : str
+        Formatted time string from :meth:`~game.state.GameState.formatted_time`.
+    """
+
+    name: str
+    description: str
+    clue: str
+    exits: tuple[str, ...]
+    items: tuple[str, ...]
+    time_remaining: str
 
 
 class GameEngine:
-    """Orchestrates rooms, commands, events, and the main game loop."""
+    """Orchestrates rooms, commands, events, and the main game loop.
+
+    This is the plain-text (``print``/``input``) variant of the engine.
+    All game logic (state mutation, event firing, command dispatching) lives
+    here; :class:`~game.curses_engine.CursesEngine` inherits and overrides
+    only the I/O methods so logic stays in a single place.
+    """
 
     def __init__(
         self,
@@ -30,14 +73,17 @@ class GameEngine:
     ) -> None:
         """Initialise the engine with the full game world and a fresh state.
 
-        Args:
-            rooms:       Mapping of room_id -> :class:`~game.room.Room` built by
-                         :func:`~game.world.build_world`.
-            state:       The :class:`~game.state.GameState` for this session.
-            registry:    Command registry populated by
-                         :func:`main.build_commands`.
-            event_queue: Ambient event queue built by
-                         :func:`main.build_events`.
+        Parameters
+        ----------
+        rooms : dict[str, Room]
+            Mapping of ``room_id`` → :class:`~game.room.Room` built by
+            :func:`~game.world.build_world`.
+        state : GameState
+            Mutable game state for this session.
+        registry : CommandRegistry
+            Command registry populated by :func:`~game.player_commands.build_commands`.
+        event_queue : EventQueue
+            Ambient event queue built by :func:`~game.event.load_events`.
         """
         self.rooms = rooms
         self.state = state
@@ -48,7 +94,12 @@ class GameEngine:
     # ── public API ─────────────────────────────────────────────────────────────
 
     def run(self) -> None:
-        """Start and run the game until a terminal condition is reached."""
+        """Start and run the game loop until a terminal condition is reached.
+
+        The loop fires pending events, reads a command from the player,
+        dispatches it, and ticks the clock.  It exits when
+        ``state.game_over`` becomes ``True`` (timeout, win, or quit).
+        """
         self._print_intro()
         self.describe_current_room()
 
@@ -71,109 +122,157 @@ class GameEngine:
 
         self._handle_end()
 
-    def current_room(self) -> Optional[Room]:
-        """Return the :class:`~game.room.Room` the player is currently in, or None."""
+    def current_room(self) -> Room | None:
+        """Return the :class:`~game.room.Room` the player is currently in.
+
+        Returns
+        -------
+        Room or None
+            The ``Room`` object for ``state.current_room_id``, or ``None``
+            if the ID is somehow not in the rooms dict.
+        """
         return self.rooms.get(self.state.current_room_id)
 
+    def signal_transition(self) -> None:
+        """Arm a visual room-transition effect before the next room description.
+
+        The base (plain-text) implementation is a no-op.  Subclasses
+        (e.g. :class:`~game.curses_engine.CursesEngine`) override this to
+        trigger effects such as a fade-to-black between rooms.
+        """
+
     def describe_current_room(self) -> None:
-        """Print the current room's name, description, exits, and visible items."""
-        room = self.current_room()
-        if room is None:
+        """Print the current room's name, description, exits, and visible items.
+
+        Delegates to :meth:`_current_room_view` to gather data so the curses
+        subclass can reuse the same view snapshot for its own rendering.
+        """
+        room_view = self._current_room_view()
+        if room_view is None:
             return
-        print(f"\n[ {room.name} ]")
-        print(room.description)
-        # Inject Step 1 clue when player is at the 4-way intersection.
-        if room.room_id == "intersection_4way":
-            clue = step1_clue_text(self.state)
-            if clue:
-                print(f"\n{clue}")
-        # Show sink status in bathroom.
-        elif room.room_id == "bathroom":
-            status = self._bathroom_status()
-            if status:
-                print(f"\n{status}")
-        # Show ambient janitor lyric clue (grows with urgency).
-        elif room.room_id == "hallway_janitor":
-            hint = self._janitor_hint()
-            if hint:
-                print(f"\n{hint}")
-        exits = [d for d, dest in room.exits.items() if dest is not None]
-        if exits:
-            print(f"Exits: {', '.join(exits)}")
-        if room.items:
-            print(f"You see: {', '.join(room.items.values())}")
-        print(f"Time remaining: {self.state.formatted_time()}")
+        print(f"\n[ {room_view.name} ]")
+        print(room_view.description)
+        if room_view.clue:
+            print(f"\n{room_view.clue}")
+        if room_view.exits:
+            print(f"Exits: {', '.join(room_view.exits)}")
+        if room_view.items:
+            print(f"You see: {', '.join(room_view.items)}")
+        print(f"Time remaining: {room_view.time_remaining}")
 
     # ── private helpers ────────────────────────────────────────────────────────
 
-    def _bathroom_status(self) -> str:
-        """Return the current sink/handwashing status line for the bathroom room.
+    def _current_room_clue(self, room: Room) -> str:
+        """Return the dynamic clue text for *room*, or ``""`` when none applies.
 
-        Returns an empty string when the bathroom is not the current room or
-        when no status line is appropriate.
+        Dispatches to the appropriate helper based on ``room.room_id``:
+        puzzle clue for the 4-way intersection, wash status for the bathroom,
+        and janitor hint for the janitor hallway.
+
+        Parameters
+        ----------
+        room : Room
+            The room to generate a clue for.
+
+        Returns
+        -------
+        str
+            Dynamic clue string, or an empty string.
         """
-        room = self.current_room()
-        if room is None or room.room_id != "bathroom":
-            return ""
-        phase = room.attributes.get("wash_phase", 0)
-        running = room.attributes.get("sink_running", False)
-        bs = _UI["bathroom_status"]
-        if self.state.has_flag("step2_hands_washed"):
-            return bs["clean"]
-        if running and phase == 0:
-            if room.attributes.get("soap_applied"):
-                return bs["soapy"]
-            return bs["soap_needed"]
-        if not running and phase == 1:
-            return bs["water_cut"]
-        if running and phase == 2:
-            return bs["water_back"]
-        if running and phase == 3:
-            return bs["final_rinse"]
+        if room.room_id == "intersection_4way":
+            return step1_clue_text(self.state)
+        if room.room_id == "bathroom":
+            return bathroom_status_text(room, self.state, UI["bathroom_status"])
+        if room.room_id == "hallway_janitor":
+            return janitor_hint_text(self.state, UI["ambient"]["janitor_hint_prefix"])
         return ""
 
-    def _janitor_hint(self) -> str:
-        """Return an ambient chorus snippet for the janitor hallway, scaled to urgency.
+    def _current_room_view(self) -> CurrentRoomView | None:
+        """Build and return a :class:`CurrentRoomView` for the current room.
 
-        Shows one lyric line when time is plentiful, two around the midpoint,
-        and all remaining lines in the final stretch, so the clue becomes
-        easier to use as pressure mounts.
+        Computing the view once and passing it to both the log panel and room
+        panel prevents the two UI layers from evaluating state twice or
+        showing inconsistent data.
+
+        Returns
+        -------
+        CurrentRoomView or None
+            Snapshot of the current room's presentable data, or ``None`` if
+            ``state.current_room_id`` is not in the rooms dict.
         """
         room = self.current_room()
-        if room is None or room.room_id != "hallway_janitor":
-            return ""
-        chorus = self.state.active_clues.get("step3_song_chorus", "")
-        if not chorus:
-            return ""
-        all_lines = chorus.strip().splitlines()
-        t = self.state.time_remaining
-        count = 1 if t > 300 else (2 if t > 150 else len(all_lines))
-        shown = all_lines[:count]
-        indented = "\n".join(f"  {line}" for line in shown)
-        return _UI["ambient"]["janitor_hint_prefix"] + "\n" + indented
+        if room is None:
+            return None
+        return CurrentRoomView(
+            name=room.name,
+            description=room.description,
+            clue=self._current_room_clue(room),
+            exits=tuple(
+                direction for direction, dest in room.exits.items() if dest is not None
+            ),
+            items=tuple(room.items.values()),
+            time_remaining=self.state.formatted_time(),
+        )
+
+    def _intro_banner_lines(self) -> list[str]:
+        """Return the intro banner lines, including optional ASCII art.
+
+        Both the plain-text engine and the curses engine share the same
+        banner source so both entry points stay visually consistent.
+
+        Returns
+        -------
+        list[str]
+            Lines to display in the opening title card, with the ASCII art
+            (if configured) prepended before the title line.
+        """
+        intro = UI["intro"]
+        lines: list[str] = []
+        art = intro.get("ascii_art", "")
+        if art:
+            lines.extend(art.splitlines())
+            lines.append("")
+        lines.append(intro["title"])
+        return lines
 
     def _print_intro(self) -> None:
-        """Print the one-time opening title card and story hook."""
-        intro = _UI["intro"]
+        """Print the one-time opening title card and story-hook paragraphs."""
+        intro = UI["intro"]
         print("\n" + "=" * 60)
-        print(f"  {intro['title']}")
+        for line in self._intro_banner_lines():
+            if line:
+                print(f"  {line}")
+            else:
+                print()
         print("=" * 60)
         print(intro["opening"])
         print(intro["problem"] + "\n")
         print(intro["teacher"] + "\n")
 
+    def _end_lines(self) -> list[str] | None:
+        """Return end-screen text lines, or ``None`` when quit handled the farewell.
+
+        Returns
+        -------
+        list[str] or None
+            Lines to print inside the end-screen border, or ``None`` if the
+            player quit (the quit command already showed a goodbye message).
+        """
+        end = UI["end"]
+        if self.state.quit:
+            return None
+        if self.state.won and self.state.time_remaining >= 300:
+            return end["won_early"].splitlines()
+        if self.state.won:
+            return end["won"].splitlines()
+        return end["lost"].splitlines()
+
     def _handle_end(self) -> None:
         """Print the appropriate end screen based on final game state."""
-        end = _UI["end"]
-        if self.state.won and self.state.time_remaining >= 300:
-            key = "won_early"
-        elif self.state.won:
-            key = "won"
-        elif self.state.quit:
-            return  # farewell already printed by handle_quit
-        else:
-            key = "lost"
+        lines = self._end_lines()
+        if lines is None:
+            return
         print("\n" + "=" * 60)
-        for line in end[key].splitlines():
+        for line in lines:
             print(f"  {line}")
         print("=" * 60)

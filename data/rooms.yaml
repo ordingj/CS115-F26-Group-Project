@@ -18,13 +18,15 @@ rooms:
   - room_id: lobby
     name: Building Lobby
     description: >-
-      The lobby is almost empty. Construction noise rumbles from the left hallway, blocked off
-      with orange cones and caution tape. A hand-lettered detour sign points down a narrower
-      hallway you've never noticed before. The fluorescent lights buzz at a frequency just
-      below comfortable.
+      The lobby is almost empty. The hallway straight ahead is blocked off with orange cones
+      and caution tape — construction, apparently. A hand-lettered detour sign points down a
+      narrower hallway to your left that you've never noticed before. Behind you, the main exit
+      doors are chained shut. The fluorescent lights buzz at a frequency just below
+      comfortable.
     exits:
-      forward: hallway_approach
-      left: null
+      forward: __lobby_forward_blocked__
+      left: hallway_approach
+      back: __lobby_back_blocked__
     items:
       detour_sign: a hand-lettered detour sign
     attributes:

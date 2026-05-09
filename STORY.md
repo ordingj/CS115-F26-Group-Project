@@ -120,7 +120,7 @@ Why This Works
   - observe patterns
   - interact (wash hands, observe)
   - remember sequence
-- Feels like: _solving something logical _ but inside something irrational ⸻
+- Feels like: _solving something logical_ but inside something irrational ⸻
 
 Ending Variants
 
