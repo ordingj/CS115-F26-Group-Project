@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import curses
 import textwrap
+from collections.abc import Callable
 
 from game.command import CommandRegistry
 from game.curses_rendering import (
@@ -110,34 +111,39 @@ class CursesEngine(GameEngine):
 
         self._setup_windows()
 
-        # Intro messages logged before the first room description.
+        self._start_session()
+        self._play_until_game_over()
+        self._handle_end()
+
+    def _start_session(self) -> None:
+        """Log the curses intro banner and render the starting room once."""
         intro = UI["intro"]
         for line in self._intro_banner_lines():
             self._log(line)
         self._log(intro["curses_subtitle"])
         self._log(intro["help_hint"])
         self._log("")
-
         self.describe_current_room()
 
-        while not self.state.game_over:
-            for msg in self.event_queue.tick(self.state):
-                self._log(msg, style="event")
-            self._refresh_header()
+    def _emit_event(self, message: str) -> None:
+        """Append one ambient event message to the curses log."""
+        self._log(message, style="event")
 
-            raw = self._get_input()
-            if not raw:
-                continue
+    def _before_command_prompt(self) -> None:
+        """Refresh the header before each curses input prompt."""
+        self._refresh_header()
 
-            self._log("> " + raw)
-            command = self.parser.parse(raw)
-            result = self.registry.dispatch(command, self.state)
-            if result:
-                self._log(result)
+    def _read_command(self) -> str:
+        """Return one raw player command line from the curses input bar."""
+        return self._get_input()
 
-            self.state.tick()
+    def _echo_command(self, raw: str) -> None:
+        """Echo one raw player command into the curses log."""
+        self._log("> " + raw)
 
-        self._handle_end()
+    def _emit_command_result(self, result: str) -> None:
+        """Append one command result string to the curses log."""
+        self._log(result)
 
     # ── window setup ───────────────────────────────────────────────────────────
 
@@ -203,7 +209,7 @@ class CursesEngine(GameEngine):
             :func:`~game.curses_rendering.classify_log_line` infers the
             style from the line's content.
         """
-        inner_w = max(1, self._w - (PANEL_PAD * 2))
+        inner_w = self._panel_inner_width()
         for part in msg.split("\n"):
             line_style = (
                 style
@@ -223,20 +229,41 @@ class CursesEngine(GameEngine):
             self._log_lines.extend((line_style, line) for line in wrapped)
         self._refresh_log()
 
-    def _refresh_log(self) -> None:
-        """Re-render the scrolling log panel, showing only the most recent lines."""
-        inner_w = max(1, self._w - (PANEL_PAD * 2))
-        inner_h = max(0, self._log_h - 2)
-        visible = self._log_lines[-inner_h:]
+    def _panel_inner_width(self) -> int:
+        """Return the usable content width inside boxed room/log panels."""
+        return max(1, self._w - (PANEL_PAD * 2))
+
+    def _render_panel(
+        self,
+        win: curses.window | None,
+        title: str,
+        lines: list[tuple[str, str]],
+        *,
+        height: int,
+        attr_resolver: Callable[[str, bool], int],
+    ) -> None:
+        """Render one boxed panel using the shared width and color setup."""
         supports_color = self._supports_color()
         render_boxed_panel(
+            win,
+            title,
+            lines,
+            inner_w=self._panel_inner_width(),
+            height=height,
+            supports_color=supports_color,
+            attr_for_style=lambda style: attr_resolver(style, supports_color),
+        )
+
+    def _refresh_log(self) -> None:
+        """Re-render the scrolling log panel, showing only the most recent lines."""
+        inner_h = max(0, self._log_h - 2)
+        visible = self._log_lines[-inner_h:]
+        self._render_panel(
             self._log_win,
             UI["ui_labels"]["panel_log"],
             visible,
-            inner_w=inner_w,
             height=self._log_h,
-            supports_color=supports_color,
-            attr_for_style=lambda style: log_attr(style, supports_color),
+            attr_resolver=log_attr,
         )
 
     def _supports_color(self) -> bool:
@@ -292,17 +319,14 @@ class CursesEngine(GameEngine):
         if room_view is None:
             return
 
-        inner_w = max(1, self._w - (PANEL_PAD * 2))
+        inner_w = self._panel_inner_width()
         lines = build_room_lines(room_view, inner_w)
-        supports_color = self._supports_color()
-        render_boxed_panel(
+        self._render_panel(
             self._room_win,
             UI["ui_labels"]["panel_room"],
             lines,
-            inner_w=inner_w,
             height=self._room_h,
-            supports_color=supports_color,
-            attr_for_style=lambda style: room_attr(style, supports_color),
+            attr_resolver=room_attr,
         )
         self._refresh_header()
 

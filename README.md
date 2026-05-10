@@ -81,9 +81,7 @@ game/
   bathroom.py        # Shared bathroom puzzle helpers used by the command layer
   janitor.py         # Shared janitor song-clue formatting helpers
   player_commands.py # Command assembly plus non-movement room-target and interaction handlers
-  player_movement.py # Movement verbs, puzzle routing, and room-entry side effects
-  movement_routing.py # Dynamic room-entry routing and clue-driven exit wiring helpers
-  movement_validation.py # Shared movement rule tables and wrong-way validation helpers
+  player_movement.py # Movement verbs plus puzzle routing, validation, and room-entry side effects
   curses_rendering.py # Shared panel, wrapping, and style helpers for the curses UI
   room.py            # Room dataclass (exits, items, attributes)
   command.py         # Command, parser, registry, and shared command-handler adapters
@@ -103,7 +101,9 @@ tests/
   helpers.py             # Shared engine builders plus flow-test dispatch helpers
   test_core_helpers.py   # Command, state, and shared YAML-loader helper tests
   test_puzzle_helpers.py # Bathroom, janitor, and puzzle helper tests
-  test_ui_event_helpers.py # Engine formatting and event helper tests
+  test_engine_helpers.py  # Plain-engine formatting and engine-loop helper tests
+  test_curses_helpers.py  # Curses renderer and curses-engine helper tests
+  test_event_helpers.py   # Event-condition and EventQueue helper tests
   test_command_flow.py   # Supported commands and inventory command-flow coverage
   test_puzzle_flow.py    # Navigation and puzzle progression integration tests
   test_endings.py        # Win, loss, weird ending, and quit output coverage

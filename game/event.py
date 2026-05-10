@@ -8,6 +8,7 @@ declarative condition spec into a callable.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 import operator
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -20,6 +21,15 @@ if TYPE_CHECKING:
 # Condition: (state) -> bool – True when the event should fire.
 EventCondition = Callable[["GameState"], bool]
 ConditionBuilder = Callable[[dict[str, Any]], EventCondition]
+SpecValueReader = Callable[[dict[str, Any]], Any]
+
+
+@dataclass(frozen=True)
+class _ConditionBuilderSpec:
+    """Declarative description of how one YAML condition type is parsed."""
+
+    factory: Callable[..., EventCondition]
+    arg_readers: tuple[SpecValueReader, ...]
 
 
 def _time_range_condition(gt: int, lte: int) -> EventCondition:
@@ -87,38 +97,55 @@ def _all_conditions(specs: list[dict[str, Any]]) -> EventCondition:
     return lambda s: all(condition(s) for condition in subconditions)
 
 
-def _field_condition_builder(
-    field: str,
-    spec_key: str,
-    value_reader: Callable[[Any], Any],
-    comparator: Callable[[Any, Any], bool],
-) -> ConditionBuilder:
-    """Build a YAML condition parser for one GameState field comparison.
+def _spec_value_reader(
+    key: str,
+    value_reader: Callable[[Any], Any] | None = None,
+) -> SpecValueReader:
+    """Return a reader for one raw YAML condition field.
 
     Parameters
     ----------
-    field : str
-        Attribute name on :class:`~game.state.GameState` to compare.
-    spec_key : str
-        Key to read from the raw YAML condition spec.
-    value_reader : Callable[[Any], Any]
-        Normaliser used to coerce the raw spec value (for example ``int`` or
-        ``str``).
-    comparator : Callable[[Any, Any], bool]
-        Binary comparison used by :func:`_field_condition`.
+    key : str
+        Raw YAML key to read from the condition spec.
+    value_reader : Callable[[Any], Any] or None, optional
+        Optional coercion function applied to the raw value.
+
+    Returns
+    -------
+    SpecValueReader
+        Callable that extracts one argument value from a raw condition spec.
+    """
+
+    def read_spec_value(spec: dict[str, Any]) -> Any:
+        """Extract and optionally coerce one value from *spec*."""
+        value = spec[key]
+        return value_reader(value) if value_reader is not None else value
+
+    return read_spec_value
+
+
+def _condition_builder(builder_spec: _ConditionBuilderSpec) -> ConditionBuilder:
+    """Build one YAML condition parser from a declarative builder spec.
+
+    Parameters
+    ----------
+    builder_spec : _ConditionBuilderSpec
+        Declarative condition builder description.
 
     Returns
     -------
     ConditionBuilder
-        Builder that converts one raw condition spec into an
-        :class:`EventCondition`.
+        Builder that reads the required raw spec fields and passes them to the
+        configured condition factory.
     """
 
-    def build_field_condition(spec: dict[str, Any]) -> EventCondition:
-        """Parse one YAML spec and return the configured field comparison."""
-        return _field_condition(field, value_reader(spec[spec_key]), comparator)
+    def build_condition(spec: dict[str, Any]) -> EventCondition:
+        """Parse one YAML spec through the configured value readers."""
+        return builder_spec.factory(
+            *(reader(spec) for reader in builder_spec.arg_readers)
+        )
 
-    return build_field_condition
+    return build_condition
 
 
 _FIELD_CONDITION_SPECS: dict[
@@ -131,15 +158,22 @@ _FIELD_CONDITION_SPECS: dict[
 }
 
 
-_CONDITION_BUILDERS: dict[str, ConditionBuilder] = {
-    "time_range": lambda spec: _time_range_condition(int(spec["gt"]), int(spec["lte"])),
-    "all": lambda spec: _all_conditions(spec["conditions"]),
+_CONDITION_BUILDER_SPECS: dict[str, _ConditionBuilderSpec] = {
+    "time_range": _ConditionBuilderSpec(
+        _time_range_condition,
+        (
+            _spec_value_reader("gt", int),
+            _spec_value_reader("lte", int),
+        ),
+    ),
+    "all": _ConditionBuilderSpec(
+        _all_conditions,
+        (_spec_value_reader("conditions"),),
+    ),
     **{
-        condition_type: _field_condition_builder(
-            field,
-            spec_key,
-            value_reader,
-            comparator,
+        condition_type: _ConditionBuilderSpec(
+            partial(_field_condition, field, comparator=comparator),
+            (_spec_value_reader(spec_key, value_reader),),
         )
         for condition_type, (
             field,
@@ -148,6 +182,12 @@ _CONDITION_BUILDERS: dict[str, ConditionBuilder] = {
             comparator,
         ) in _FIELD_CONDITION_SPECS.items()
     },
+}
+
+
+_CONDITION_BUILDERS: dict[str, ConditionBuilder] = {
+    condition_type: _condition_builder(builder_spec)
+    for condition_type, builder_spec in _CONDITION_BUILDER_SPECS.items()
 }
 
 

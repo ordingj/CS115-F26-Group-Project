@@ -64,7 +64,9 @@ python main.py --no-curses
 
 - Use `tests/test_core_helpers.py` for parser/state/loader behavior.
 - Use `tests/test_puzzle_helpers.py` for bathroom, janitor, and puzzle helper behavior.
-- Use `tests/test_ui_event_helpers.py` for renderer and event-helper behavior.
+- Use `tests/test_engine_helpers.py` for plain-engine formatting and loop helper behavior.
+- Use `tests/test_curses_helpers.py` for curses renderer and curses-engine helper behavior.
+- Use `tests/test_event_helpers.py` for declarative event-condition and queue helper behavior.
 - Use `tests/test_command_flow.py` for supported commands and inventory command-flow coverage.
 - Use `tests/test_puzzle_flow.py` for end-to-end routing and puzzle progression behavior.
 - Use `tests/test_endings.py` for end-state output checks.

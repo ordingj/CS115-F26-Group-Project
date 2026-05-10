@@ -30,7 +30,7 @@ exactly.
 
 ### Top-level key
 
-```
+```yaml
 responses:
   <command_group>:
     <response_key>: "string" | folded-scalar | literal-block
@@ -40,8 +40,7 @@ responses:
 
 #### `responses.move`
 
-Movement-related feedback strings. Used by `game/player_movement.py` and
-`game/movement_validation.py`.
+Movement-related feedback strings. Used by `game/player_movement.py`.
 
 | Key                     | Description                                                         |
 | ----------------------- | ------------------------------------------------------------------- |
@@ -188,7 +187,7 @@ Inventory command and item-interaction responses.
 #### `responses.bathroom_status`
 
 Status line shown at the top of the bathroom room description (injected by
-`GameEngine._bathroom_status()`).
+`game.bathroom.bathroom_status_text()`).
 
 | Key           | Phase | Description                        |
 | ------------- | ----- | ---------------------------------- |
@@ -284,7 +283,7 @@ deep-copied on each `build_world()` call so multiple test instances don't share 
 | `__lobby_back_blocked__`    | Sentinel — displays `responses.move.lobby_back_blocked`.          |
 
 Exits marked `null` in this file are wired dynamically by puzzle routing logic in
-`game/movement_routing.py` each time the player enters a puzzle room.
+`game/player_movement.py` each time the player enters a puzzle room.
 
 ### Room types
 
@@ -309,7 +308,7 @@ Exits marked `null` in this file are wired dynamically by puzzle routing logic i
 
 ### Flavor rooms (wrong-way pool)
 
-Flavor rooms are sampled randomly by `movement_routing.build_room_entry_handlers()` to build a
+Flavor rooms are sampled randomly by `player_movement.build_room_entry_handlers()` to build a
 "wrong-way chain" when the player goes the wrong direction at the 4-way intersection. After
 traversing the chain they are routed back to the junction.
 

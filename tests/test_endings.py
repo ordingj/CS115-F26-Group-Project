@@ -35,6 +35,7 @@ class EngineEndingTest(unittest.TestCase):
                 with redirect_stdout(output):
                     GameEngine._handle_end(engine)
 
+                self.assertIn("=" * 60, output.getvalue())
                 self.assertIn(expected, output.getvalue())
 
     def test_handle_end_prints_nothing_after_quit(self) -> None:

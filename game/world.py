@@ -85,7 +85,7 @@ def _load_rooms() -> tuple[list[Room], list[str]]:
         )
         all_rooms.append(room)
         # Collect flavor room IDs for the wrong-way detour pool used by
-        # movement_routing.py when a player picks the wrong direction.
+        # player_movement.py when a player picks the wrong direction.
         if room_type == "flavor":
             flavor_ids.append(room.room_id)
     return all_rooms, flavor_ids

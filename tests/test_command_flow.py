@@ -66,6 +66,25 @@ class CommandCoverageTest(unittest.TestCase):
         self.assertTrue(engine.state.quit)
         self.assertTrue(engine.state.game_over)
 
+    def test_room_gated_commands_return_missing_location_responses(self) -> None:
+        """Verify that bathroom and janitor verbs still return their out-of-room fallback text."""
+        engine = make_engine(start_room="lobby")
+
+        self.assertEqual(
+            dispatch(engine, "rinse", "hands"), "There's nothing to rinse here."
+        )
+        self.assertEqual(
+            dispatch(engine, "wash", "hands"), "There's nothing to rinse here."
+        )
+        self.assertEqual(dispatch(engine, "stop"), "There's nothing to stop here.")
+        self.assertEqual(
+            dispatch(engine, "soap", "hands"), "There's no soap dispenser here."
+        )
+        self.assertEqual(
+            dispatch(engine, "listen"),
+            "You listen carefully. The building hums with an uneasy silence.",
+        )
+
 
 class InventoryTest(unittest.TestCase):
     """Verify inventory listing, aliases, drops, and inspection responses."""

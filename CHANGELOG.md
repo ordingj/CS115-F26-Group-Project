@@ -1,6 +1,154 @@
 # Changelog
 
+## 2026-05-09
+
+- Refactor — move the bathroom-specific command spec fragments out of `game/player_commands.py`
+  and into `game/bathroom.py` plus `game/bathroom_view.py`, so the player command builder now
+  focuses on cross-room composition and fallbacks instead of binding bathroom target/action
+  partials itself. Existing command-flow and puzzle-flow tests stay green across the new module
+  boundary.
+
+- Refactor — split the oversized Step 2 bathroom module at its existing read-only versus
+  mutating-helper boundary, moving sink/status/mirror/exit-block helpers into
+  `game/bathroom_view.py` while leaving `game/bathroom.py` focused on the handwashing action
+  state machine. Update direct imports and keep the bathroom helper plus puzzle-flow suites
+  green across the new module boundary.
+
+- Refactor — unify the declarative condition-builder plumbing in `game/event.py`, so every
+  supported event condition type now reads raw YAML spec fields through one shared builder path
+  instead of splitting between field-based helpers and special-case inline builders. Add
+  focused event-helper coverage for each declared leaf condition type.
+
+- Refactor — centralize the room-level Step 2 response-key lookup in `game/bathroom.py`, so the
+  sink text, status text, and exit blocker all reuse one shared room snapshot helper instead of
+  each recomputing the same read-only key mapping path. Add focused helper coverage for the
+  non-bathroom guard path.
+
+- Refactor — move the room-gated and room-target command-registration adapters into
+  `game/command.py`, so `game/player_commands.py` only defines behavior tables instead of
+  carrying duplicate current-room wrapper closures. Add focused core-helper coverage for the
+  new shared adapters.
+
+- Refactor — remove the step-specific direction-check wrappers from `game/puzzle.py` and drive
+  `game/player_movement.py`'s puzzle rules from clue keys plus one shared direction matcher.
+  Update puzzle helper assertions to cover the shared matcher instead of duplicate step-local
+  wrappers.
+
+- Refactor — centralize the shared clean-hands precheck for the Step 2 bathroom action helpers
+  in `game/bathroom.py`, so `apply_soap()`, `rinse_hands()`, and `stop_sink()` all reuse one
+  state snapshot plus `already_clean` short-circuit path instead of repeating the same action
+  prologue.
+
+- Refactor — inline the last single-use sentinel-response and room-entry wrapper helpers from
+  `game/player_movement.py`, so `handle_move()` now performs the sentinel lookup and optional
+  arrival-hook dispatch directly instead of bouncing through extra one-off functions.
+
+- Refactor — consolidate the repeated optional room-panel section assembly in
+  `game/curses_rendering.py` through one shared helper, so clue, exits, and items no longer
+  repeat the same blank-line, section-header, and wrapped-content flow inside
+  `build_room_lines()`. Add focused curses-helper coverage for empty optional sections.
+
+- Refactor — centralize the shared panel width calculation and boxed-panel render setup in
+  `game/curses_engine.py`, so the log and room refresh paths stop recomputing the same
+  `render_boxed_panel()` arguments independently. Tighten curses-helper assertions around the
+  derived inner width passed to the renderer.
+
+- Refactor — extract the shared plain-text bordered block printer in `game/engine.py`, so the
+  intro banner and ending screen stop duplicating the same frame-printing loop. Tighten plain
+  engine and ending assertions around the shared border output.
+
+- Refactor — centralize the read-only Step 2 response-key mapping in `game/bathroom.py`, so the
+  sink inspection text and ambient bathroom status line reuse one shared phase/sink-state
+  decision layer instead of re-deriving those branches independently. Add focused bathroom
+  helper coverage for the phase-2 and phase-3 running-sink mappings.
+
+- Refactor — table-drive the `look`/`read` room-target command wiring in
+  `game/player_commands.py`, so bathroom and sign-specific handlers are registered from one
+  shared spec loop instead of parallel handler-map and registration blocks. Tighten puzzle-flow
+  coverage to assert that bathroom `read mirror` still routes through the targeted handler.
+
+- Refactor — centralize the Step 2 action-transition side effects in `game/bathroom.py`, so
+  `rinse_hands()` and `stop_sink()` now reuse one shared transition descriptor for wash-phase
+  mutation, sink state changes, retry-counter resets, and completion flags. Add focused helper
+  coverage for the escalating Phase 1 rinse warnings.
+
+- Refactor — table-drive the room-gated bathroom and janitor command registrations in
+  `game/player_commands.py`, so `rinse`, `wash`, `stop`, `soap`, and `listen` all register
+  through one shared room-state spec loop instead of four parallel
+  `register_room_state_handler(...)` blocks. Add direct command-flow coverage for the
+  out-of-room fallback responses.
+
+- Refactor — promote the remaining fixed-response and state-only room-target adapters into
+  `game/command.py`, so `game/player_commands.py` no longer owns local wrapper helpers just to
+  fit declarative command specs. Add focused core-helper coverage for the shared adapters.
+
+- Refactor — promote the room-target and room-state batch registration loops into
+  `game/command.py`, so `game/player_commands.py` now only declares command specs instead of
+  owning its own bulk-registration helpers. Add focused core-helper coverage for both shared
+  batch registration paths.
+
+- Refactor — promote the simple target/state batch registration loop into `game/command.py`, so
+  `game/basic_commands.py` now registers its stateless verb families from one shared spec list
+  instead of repeating `register_target_state_handler(...)` calls. Add focused core-helper
+  coverage for the shared simple-command batch helper.
+
+- Refactor — centralize the shared room-entry setup flow in `game/player_movement.py`, so the
+  bathroom and clue-routed puzzle rooms now reuse one configured entry helper instead of mixing
+  bespoke entry functions with a separate clue-routed partial builder. Existing puzzle-flow
+  coverage continues to exercise bathroom entry, janitor entry, rerolls, and exit rewiring
+  through the shared path.
+
+- Refactor — replace the opaque movement puzzle-rule tuple in `game/player_movement.py` with a
+  named rule spec, so the direction-gated 4-way and janitor routing paths stop unpacking
+  positional config fields by hand while preserving the same puzzle-flow behavior.
+
+- Refactor — centralize the Step 2 exit-block message key in `game/bathroom.py`, so movement,
+  sink text, and bathroom status now all read from one shared response-key mapping instead of
+  keeping a separate phase-based exit-message branch. Add focused helper coverage for the Phase
+  2 blocker case.
+
+- Refactor — centralize the shared Step 2 action-dispatch skeleton in `game/bathroom.py`, so
+  `apply_soap()`, `rinse_hands()`, and `stop_sink()` all reuse one helper for the clean-hands
+  short-circuit, transition lookup, and action-specific fallback routing. Add focused helper
+  coverage for non-transition stop/soap fallback responses.
+
+- Refactor — align the movement room-entry hooks in `game/player_movement.py` on their direct
+  `(engine, state)` signature, so movement commits stop adapting arrivals through an extra
+  `partial()` and the room-entry dependency wiring uses named late-bound roll/random helpers
+  instead of inline lambdas while preserving the existing patched puzzle-flow tests.
+
 ## 2026-05-08
+
+- Refactor — split the still-oversized `tests/test_ui_helpers.py` module into
+  `tests/test_engine_helpers.py` and `tests/test_curses_helpers.py`, matching the existing
+  engine-vs-curses class boundary and keeping both helper suites under the 500-line target.
+  Fold the related monkeypatch/window typing cleanup into the new modules. Focused helper
+  suites pass.
+
+- Refactor — extract the shared event/input/dispatch/tick play loop into hook methods on
+  `game/engine.py`, so `GameEngine.run()` and `game/curses_engine.py` reuse one runtime command
+  pipeline while keeping their own presentation behavior. Focused plain/curses helper tests
+  pass.
+
+- Refactor — centralize Step 2 bathroom phase, sink, soap, and cleaned-hands reads behind one
+  shared snapshot helper in `game/bathroom.py`, so the sink/status/action helpers stop
+  re-deriving the same puzzle facts independently. Focused bathroom and puzzle-flow suites
+  pass.
+
+- Refactor — move repeated bathroom room/state setup and the standard 4-way intersection UI
+  fixture into `tests/helpers.py`, so helper-oriented test modules reuse the same shared test
+  builders instead of carrying their own room-specific setup. Focused helper classes pass.
+
+- Refactor — split the oversized `tests/test_ui_event_helpers.py` module into
+  `tests/test_ui_helpers.py` and `tests/test_event_helpers.py` so the helper test surface stays
+  under the 500-line target and UI helper coverage is separated cleanly from declarative event
+  coverage. Focused helper suites pass.
+
+- Refactor — fold the split movement routing and validation helpers back into
+  `game/player_movement.py`, removing `game/movement_routing.py` and
+  `game/movement_validation.py` so the directional puzzle pipeline lives in one owning module.
+  Update the related runtime comments and architecture/data docs to match the consolidated
+  layout.
 
 - Tests — raise source coverage for `main.py`, `game/engine.py`, `game/curses_rendering.py`,
   and `game/curses_engine.py` with composition-root tests plus mock-driven engine/curses helper

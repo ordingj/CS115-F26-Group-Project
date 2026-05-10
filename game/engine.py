@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from game import load_yaml_data
-from game.bathroom import bathroom_status_text
+from game.bathroom_view import bathroom_status_text
 from game.command import CommandParser, CommandRegistry
 from game.event import EventQueue
 from game.janitor import janitor_hint_text
@@ -100,26 +100,8 @@ class GameEngine:
         dispatches it, and ticks the clock.  It exits when
         ``state.game_over`` becomes ``True`` (timeout, win, or quit).
         """
-        self._print_intro()
-        self.describe_current_room()
-
-        while not self.state.game_over:
-            # Fire any pending events (time warnings, ambient flavor, etc.).
-            for msg in self.event_queue.tick(self.state):
-                print(f"\n{msg}")
-
-            raw = input("\n> ").strip()
-            if not raw:
-                continue
-
-            command = self.parser.parse(raw)
-            result = self.registry.dispatch(command, self.state)
-            if result:
-                print(f"\n{result}")
-
-            # Advance time after every non-empty command.
-            self.state.tick()
-
+        self._start_session()
+        self._play_until_game_over()
         self._handle_end()
 
     def current_room(self) -> Room | None:
@@ -235,19 +217,65 @@ class GameEngine:
         lines.append(intro["title"])
         return lines
 
-    def _print_intro(self) -> None:
-        """Print the one-time opening title card and story-hook paragraphs."""
-        intro = UI["intro"]
+    def _print_framed_lines(self, lines: list[str]) -> None:
+        """Print one bordered block of lines using the plain-text UI frame."""
         print("\n" + "=" * 60)
-        for line in self._intro_banner_lines():
+        for line in lines:
             if line:
                 print(f"  {line}")
             else:
                 print()
         print("=" * 60)
+
+    def _print_intro(self) -> None:
+        """Print the one-time opening title card and story-hook paragraphs."""
+        intro = UI["intro"]
+        self._print_framed_lines(self._intro_banner_lines())
         print(intro["opening"])
         print(intro["problem"] + "\n")
         print(intro["teacher"] + "\n")
+
+    def _start_session(self) -> None:
+        """Show the intro for this UI and render the starting room once."""
+        self._print_intro()
+        self.describe_current_room()
+
+    def _emit_event(self, message: str) -> None:
+        """Present one ambient event message in the active UI."""
+        print(f"\n{message}")
+
+    def _before_command_prompt(self) -> None:
+        """Run any per-turn UI refresh needed before input is collected."""
+
+    def _read_command(self) -> str:
+        """Return one raw player command line for the active UI."""
+        return input("\n> ").strip()
+
+    def _echo_command(self, raw: str) -> None:
+        """Optionally echo the raw player command in the active UI."""
+
+    def _emit_command_result(self, result: str) -> None:
+        """Present one command result string in the active UI."""
+        print(f"\n{result}")
+
+    def _play_until_game_over(self) -> None:
+        """Run the shared event/input/dispatch/tick loop until the game ends."""
+        while not self.state.game_over:
+            for msg in self.event_queue.tick(self.state):
+                self._emit_event(msg)
+
+            self._before_command_prompt()
+            raw = self._read_command()
+            if not raw:
+                continue
+
+            self._echo_command(raw)
+            command = self.parser.parse(raw)
+            result = self.registry.dispatch(command, self.state)
+            if result:
+                self._emit_command_result(result)
+
+            self.state.tick()
 
     def _end_lines(self) -> list[str] | None:
         """Return end-screen text lines, or ``None`` when quit handled the farewell.
@@ -272,7 +300,4 @@ class GameEngine:
         lines = self._end_lines()
         if lines is None:
             return
-        print("\n" + "=" * 60)
-        for line in lines:
-            print(f"  {line}")
-        print("=" * 60)
+        self._print_framed_lines(lines)

@@ -16,8 +16,19 @@ from game.command import (
     Command,
     CommandParser,
     CommandRegistry,
+    fixed_room_state_handler,
+    register_target_state_command_specs,
+    register_room_state_command_specs,
+    register_room_state_handler,
+    register_room_target_command_specs,
+    register_room_target_state_handler,
     register_target_state_handler,
+    TargetStateCommandSpec,
+    RoomStateCommandSpec,
+    RoomTargetCommandSpec,
+    state_only_room_state_handler,
 )
+from game.room import Room
 from game.state import GameState
 
 
@@ -92,6 +103,164 @@ class CommandRegistryTest(unittest.TestCase):
         result = registry.dispatch(Command("examine", "mirror"), state)
 
         self.assertEqual(result, "ok")
+        self.assertEqual(seen, [("mirror", state)])
+
+    def test_register_room_state_handler_gates_on_current_room(self) -> None:
+        """Verify that room-gated handlers run only in the matching room."""
+        registry = CommandRegistry()
+        state = GameState(current_room_id="bathroom")
+        bathroom = Room("bathroom", "Bathroom", "", attributes={"sink": True})
+        current_room = Mock(return_value=bathroom)
+
+        def handler(room: Room, game_state: GameState) -> str:
+            self.assertIs(room, bathroom)
+            self.assertIs(game_state, state)
+            return "washed"
+
+        register_room_state_handler(
+            registry,
+            current_room,
+            "bathroom",
+            "not here",
+            handler,
+            "wash",
+        )
+
+        result = registry.dispatch(Command("wash"), state)
+
+        self.assertEqual(result, "washed")
+
+        current_room.return_value = Room("lobby", "Lobby", "")
+
+        missing = registry.dispatch(Command("wash"), state)
+
+        self.assertEqual(missing, "not here")
+
+    def test_fixed_room_state_handler_returns_static_response(self) -> None:
+        """Verify that the shared fixed room/state adapter ignores room and state."""
+        state = GameState(current_room_id="bathroom")
+        bathroom = Room("bathroom", "Bathroom", "")
+
+        handler = fixed_room_state_handler("static")
+
+        self.assertEqual(handler(bathroom, state), "static")
+
+    def test_state_only_room_state_handler_delegates_to_state_only_handler(
+        self,
+    ) -> None:
+        """Verify that the shared adapter forwards only the game state to the wrapped handler."""
+        state = GameState(current_room_id="bathroom")
+        bathroom = Room("bathroom", "Bathroom", "")
+        seen: list[GameState] = []
+
+        def handler(game_state: GameState) -> str:
+            seen.append(game_state)
+            return "mirror"
+
+        adapted = state_only_room_state_handler(handler)
+
+        self.assertEqual(adapted(bathroom, state), "mirror")
+        self.assertEqual(seen, [state])
+
+    def test_register_room_target_state_handler_prefers_room_target_match(self) -> None:
+        """Verify that room-target handlers win before the generic fallback."""
+        registry = CommandRegistry()
+        state = GameState(current_room_id="bathroom")
+        bathroom = Room("bathroom", "Bathroom", "")
+        current_room = Mock(return_value=bathroom)
+        fallback = Mock(return_value="fallback")
+
+        def handler(room: Room, game_state: GameState) -> str:
+            self.assertIs(room, bathroom)
+            self.assertIs(game_state, state)
+            return "mirror"
+
+        register_room_target_state_handler(
+            registry,
+            current_room,
+            {("bathroom", "mirror"): handler},
+            fallback,
+            "look",
+        )
+
+        result = registry.dispatch(Command("look", "mirror"), state)
+
+        self.assertEqual(result, "mirror")
+        fallback.assert_not_called()
+
+        current_room.return_value = Room("lobby", "Lobby", "")
+
+        missing = registry.dispatch(Command("look", "mirror"), state)
+
+        self.assertEqual(missing, "fallback")
+        fallback.assert_called_once_with("mirror", state)
+
+    def test_register_room_state_command_specs_registers_each_spec(self) -> None:
+        """Verify that the shared batch helper wires each room-gated spec under all its verbs."""
+        registry = CommandRegistry()
+        state = GameState(current_room_id="bathroom")
+        bathroom = Room("bathroom", "Bathroom", "")
+        current_room = Mock(return_value=bathroom)
+        seen: list[tuple[Room, GameState]] = []
+
+        def handler(room: Room, game_state: GameState) -> str:
+            seen.append((room, game_state))
+            return "washed"
+
+        command_specs: tuple[RoomStateCommandSpec, ...] = (
+            (("wash", "rinse"), "bathroom", "not here", handler),
+        )
+
+        register_room_state_command_specs(registry, current_room, command_specs)
+
+        self.assertEqual(registry.dispatch(Command("rinse"), state), "washed")
+        self.assertEqual(seen, [(bathroom, state)])
+
+    def test_register_room_target_command_specs_registers_each_spec(self) -> None:
+        """Verify that the shared batch helper wires room-target specs and preserves fallback behavior."""
+        registry = CommandRegistry()
+        state = GameState(current_room_id="bathroom")
+        bathroom = Room("bathroom", "Bathroom", "")
+        current_room = Mock(return_value=bathroom)
+        fallback = Mock(return_value="fallback")
+
+        def handler(room: Room, game_state: GameState) -> str:
+            self.assertIs(room, bathroom)
+            self.assertIs(game_state, state)
+            return "mirror"
+
+        command_specs: tuple[RoomTargetCommandSpec, ...] = (
+            (("look",), {("bathroom", "mirror"): handler}, fallback),
+        )
+
+        register_room_target_command_specs(registry, current_room, command_specs)
+
+        self.assertEqual(registry.dispatch(Command("look", "mirror"), state), "mirror")
+
+        current_room.return_value = Room("lobby", "Lobby", "")
+
+        self.assertEqual(
+            registry.dispatch(Command("look", "mirror"), state), "fallback"
+        )
+        fallback.assert_called_once_with("mirror", state)
+
+    def test_register_target_state_command_specs_registers_each_spec(self) -> None:
+        """Verify that the shared batch helper wires each simple handler under all its verbs."""
+        registry = CommandRegistry()
+        state = GameState(current_room_id="lobby")
+        seen: list[tuple[str | None, GameState]] = []
+
+        def handler(target: str | None, game_state: GameState) -> str:
+            seen.append((target, game_state))
+            return "ok"
+
+        command_specs: tuple[TargetStateCommandSpec, ...] = (
+            (("look", "examine"), handler),
+        )
+
+        register_target_state_command_specs(registry, command_specs)
+
+        self.assertEqual(registry.dispatch(Command("examine", "mirror"), state), "ok")
         self.assertEqual(seen, [("mirror", state)])
 
 

@@ -117,7 +117,7 @@ def _active_clue_value(state: GameState, clue_key: str) -> str:
     return str(state.active_clues.get(clue_key, ""))
 
 
-def _is_active_direction(direction: str, state: GameState, clue_key: str) -> bool:
+def clue_direction_matches(direction: str, state: GameState, clue_key: str) -> bool:
     """Return ``True`` when *direction* matches the stored clue under *clue_key*.
 
     Parameters
@@ -202,24 +202,6 @@ def step1_clue_text(state: GameState) -> str:
     return template.format(correct=correct_dir, opposite=opposite_dir)
 
 
-def step1_is_correct(direction: str, state: GameState) -> bool:
-    """Return ``True`` if *direction* matches the current Step 1 correct direction.
-
-    Parameters
-    ----------
-    direction : str
-        Player-chosen direction to validate.
-    state : GameState
-        The live game state containing the ``"step1_correct_dir"`` clue.
-
-    Returns
-    -------
-    bool
-        ``True`` when *direction* equals the stored correct direction.
-    """
-    return _is_active_direction(direction, state, "step1_correct_dir")
-
-
 # ── Step 2 – bathroom mirror ───────────────────────────────────────────────────
 
 
@@ -289,21 +271,3 @@ def step3_roll(state: GameState) -> None:
     title, chorus = random.choice(pool)
     state.active_clues["step3_song_title"] = title
     state.active_clues["step3_song_chorus"] = chorus
-
-
-def step3_is_correct(direction: str, state: GameState) -> bool:
-    """Return ``True`` if *direction* matches the current Step 3 correct direction.
-
-    Parameters
-    ----------
-    direction : str
-        Player-chosen direction to validate.
-    state : GameState
-        The live game state containing the ``"step3_correct_dir"`` clue.
-
-    Returns
-    -------
-    bool
-        ``True`` when *direction* equals the stored correct direction.
-    """
-    return _is_active_direction(direction, state, "step3_correct_dir")

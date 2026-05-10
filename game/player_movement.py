@@ -1,35 +1,292 @@
-"""Movement command registration and puzzle room-entry helpers.
+"""Movement command registration plus movement-specific puzzle helpers.
 
-Exports :func:`register_movement_commands`, which wires the four directional
-verbs (``forward``, ``back``, ``left``, ``right``) to the full movement
-pipeline: validation → bathroom block check → puzzle routing → commit +
-arrival hooks.
+This module owns the full directional movement pipeline: special blocker
+responses, direction-gated puzzle validation, wrong-way detours, and room
+entry side effects for puzzle rooms.
 """
 
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from functools import partial
 
-from game.bathroom import bathroom_exit_block_message
+from game.bathroom_view import bathroom_exit_block_message
 from game.command import CommandRegistry
 from game.engine import GameEngine
-from game.movement_routing import build_room_entry_handlers, handle_room_entry
-from game.movement_validation import (
-    build_puzzle_move_rules,
-    puzzle_move_response,
-    special_move_response,
-)
 from game.puzzle import (
-    step1_is_correct,
     step1_roll,
     step2_roll,
-    step3_is_correct,
     step3_roll,
+    clue_direction_matches,
 )
+from game.room import Room
 from game.state import GameState
 from game.world import FLAVOR_ROOM_POOL
+
+
+@dataclass(frozen=True)
+class PuzzleDirectionRule:
+    """Named config for one direction-gated puzzle move rule."""
+
+    active_room_id: str
+    allowed_verbs: tuple[str, ...] | None
+    clue_key: str
+    wrong_message_key: str
+    solved_step: int
+    solved_flag: str
+    wrong_turn_flag: str | None = None
+
+
+WrongWayHandler = Callable[
+    [GameEngine, GameState, str, str, str | None],
+    str,
+]
+"""Callable type for wrong-way move handlers."""
+
+RoomEntryHandler = Callable[[GameEngine, GameState], None]
+"""Callable type for room-entry side-effect handlers."""
+
+
+@dataclass(frozen=True)
+class _ConfiguredRoomEntrySpec:
+    """Declarative spec for one room-entry handler built from shared setup steps."""
+
+    room_id: str
+    clue_key: str | None = None
+    correct_destination: str | None = None
+    wrong_destination: str | None = None
+    wrong_way_return_room_id: str | None = None
+    rolled_flag: str | None = None
+    roll_handler: Callable[[GameState], None] | None = None
+    room_attribute_updates: Mapping[str, object] = field(default_factory=dict)
+
+
+SPECIAL_MOVE_DESTINATIONS: dict[str, str] = {
+    "__lobby_forward_blocked__": "lobby_forward_blocked",
+    "__lobby_back_blocked__": "lobby_back_blocked",
+}
+
+
+PUZZLE_MOVE_RULES: tuple[PuzzleDirectionRule, ...] = (
+    PuzzleDirectionRule(
+        active_room_id="intersection_4way",
+        allowed_verbs=None,
+        clue_key="step1_correct_dir",
+        wrong_message_key="wrong_4way",
+        solved_step=1,
+        solved_flag="step1_solved",
+        wrong_turn_flag="step1_wrong_way",
+    ),
+    PuzzleDirectionRule(
+        active_room_id="hallway_janitor",
+        allowed_verbs=("forward", "left", "right"),
+        clue_key="step3_correct_dir",
+        wrong_message_key="wrong_janitor",
+        solved_step=3,
+        solved_flag="step3_solved",
+    ),
+)
+"""Direction-gated puzzle movement rules keyed by the active clue to validate."""
+
+
+def _run_step1_roll(state: GameState) -> None:
+    """Late-bind Step 1 clue seeding so tests can still patch ``step1_roll``."""
+    step1_roll(state)
+
+
+def _run_step2_roll(state: GameState) -> None:
+    """Late-bind Step 2 clue seeding so tests can still patch ``step2_roll``."""
+    step2_roll(state)
+
+
+def _run_step3_roll(state: GameState) -> None:
+    """Late-bind Step 3 clue seeding so tests can still patch ``step3_roll``."""
+    step3_roll(state)
+
+
+def _pick_flavor_count() -> int:
+    """Return the randomized flavor-chain length for a wrong-way detour."""
+    return random.randint(2, 3)
+
+
+def _sample_flavor_rooms(count: int) -> list[str]:
+    """Return a randomized subset of flavor rooms for the detour chain."""
+    return random.sample(FLAVOR_ROOM_POOL, count)
+
+
+def _validate_direction_puzzle_move(
+    rule: PuzzleDirectionRule,
+    wrong_way_handler: WrongWayHandler,
+    engine: GameEngine,
+    room: Room,
+    verb: str,
+    state: GameState,
+    destination_id: str,
+) -> str | None:
+    """Apply one puzzle direction rule to the current move."""
+    if room.room_id != rule.active_room_id:
+        return None
+    if rule.allowed_verbs is not None and verb not in rule.allowed_verbs:
+        return None
+    if not clue_direction_matches(verb, state, rule.clue_key):
+        return wrong_way_handler(
+            engine,
+            state,
+            destination_id,
+            rule.wrong_message_key,
+            rule.wrong_turn_flag,
+        )
+    state.puzzle_step = rule.solved_step
+    state.set_flag(rule.solved_flag, True)
+    return None
+
+
+def puzzle_move_response(
+    rules: Sequence[PuzzleDirectionRule],
+    wrong_way_handler: WrongWayHandler,
+    engine: GameEngine,
+    room: Room,
+    verb: str,
+    state: GameState,
+    destination_id: str,
+) -> str | None:
+    """Return the first wrong-way response triggered by the puzzle rules."""
+    for rule in rules:
+        puzzle_result = _validate_direction_puzzle_move(
+            rule,
+            wrong_way_handler,
+            engine,
+            room,
+            verb,
+            state,
+            destination_id,
+        )
+        if puzzle_result is not None:
+            return puzzle_result
+    return None
+
+
+def _route(exits: dict[str, str | None], correct: str, yes: str, no: str) -> None:
+    """Wire forward/left/right exits so only *correct* reaches *yes*."""
+    for direction in ("forward", "left", "right"):
+        exits[direction] = yes if direction == correct else no
+
+
+def _wire_flavor_chain(
+    engine: GameEngine, chain: list[str], return_room_id: str
+) -> None:
+    """Wire each sampled flavor room toward the next detour room."""
+    for room_id, next_id in zip(chain, chain[1:] + [return_room_id]):
+        engine.rooms[room_id].exits["forward"] = next_id
+
+
+def _roll_once(
+    state: GameState, rolled_flag: str, roll_handler: Callable[[GameState], None]
+) -> None:
+    """Invoke a puzzle roll handler only on the first matching entry."""
+    if state.has_flag(rolled_flag):
+        return
+    roll_handler(state)
+    state.set_flag(rolled_flag)
+
+
+def _enter_configured_room(
+    engine: GameEngine,
+    state: GameState,
+    *,
+    spec: _ConfiguredRoomEntrySpec,
+) -> None:
+    """Apply the shared setup flow for bathroom and clue-routed room entries."""
+    if spec.rolled_flag is not None and spec.roll_handler is not None:
+        _roll_once(state, spec.rolled_flag, spec.roll_handler)
+    if spec.room_attribute_updates:
+        engine.rooms[spec.room_id].attributes.update(spec.room_attribute_updates)
+    if (
+        spec.clue_key is None
+        or spec.correct_destination is None
+        or spec.wrong_destination is None
+    ):
+        return
+    correct_dir = state.active_clues.get(spec.clue_key, "")
+    _route(
+        engine.rooms[spec.room_id].exits,
+        correct_dir,
+        spec.correct_destination,
+        spec.wrong_destination,
+    )
+    if spec.wrong_way_return_room_id is not None:
+        engine.rooms[spec.wrong_destination].exits["forward"] = (
+            spec.wrong_way_return_room_id
+        )
+
+
+def build_room_entry_handlers(
+    *,
+    step1_roll_handler: Callable[[GameState], None],
+    step2_roll_handler: Callable[[GameState], None],
+    step3_roll_handler: Callable[[GameState], None],
+    pick_flavor_count: Callable[[], int],
+    sample_flavor_rooms: Callable[[int], list[str]],
+) -> dict[str, RoomEntryHandler]:
+    """Build the destination-to-handler table for puzzle room entry effects."""
+
+    def enter_intersection_4way(engine: GameEngine, state: GameState) -> None:
+        """Roll Step 1, wire the flavor detour chain, and set the junction exits."""
+        step1_roll_handler(state)
+        correct_dir = state.active_clues["step1_correct_dir"]
+        chain = sample_flavor_rooms(pick_flavor_count())
+        _wire_flavor_chain(engine, chain, "intersection_4way")
+        _route(
+            engine.rooms["intersection_4way"].exits,
+            correct_dir,
+            "intersection_3way",
+            chain[0],
+        )
+
+    def enter_room_314(_engine: GameEngine, state: GameState) -> None:
+        """Mark the game as won when the player reaches Room 314."""
+        state.won = True
+        state.game_over = True
+
+    configured_entry_specs: tuple[_ConfiguredRoomEntrySpec, ...] = (
+        _ConfiguredRoomEntrySpec(
+            room_id="bathroom",
+            rolled_flag="step2_rolled",
+            roll_handler=step2_roll_handler,
+            room_attribute_updates={"sink_running": True},
+        ),
+        _ConfiguredRoomEntrySpec(
+            room_id="intersection_3way_exit",
+            clue_key="step2_mirror_dir",
+            correct_destination="hallway_janitor",
+            wrong_destination="flavor_copy_room",
+        ),
+        _ConfiguredRoomEntrySpec(
+            room_id="hallway_janitor",
+            clue_key="step3_correct_dir",
+            correct_destination="hallway_final",
+            wrong_destination="flavor_copy_room",
+            wrong_way_return_room_id="hallway_janitor",
+            rolled_flag="step3_rolled",
+            roll_handler=step3_roll_handler,
+        ),
+    )
+
+    configured_handlers: dict[str, RoomEntryHandler] = {
+        spec.room_id: partial(
+            _enter_configured_room,
+            spec=spec,
+        )
+        for spec in configured_entry_specs
+    }
+
+    return {
+        "intersection_4way": enter_intersection_4way,
+        **configured_handlers,
+        "room_314": enter_room_314,
+    }
 
 
 def register_movement_commands(
@@ -55,7 +312,7 @@ def register_movement_commands(
         engine: GameEngine,
         destination_id: str,
         state: GameState,
-        on_arrival: Callable[[], None] | None = None,
+        on_arrival: RoomEntryHandler | None = None,
     ) -> None:
         """Commit a room change, run any arrival hook, and re-render the destination.
 
@@ -67,13 +324,13 @@ def register_movement_commands(
             ``room_id`` of the room to enter.
         state : GameState
             Mutable game state; ``current_room_id`` is updated in place.
-        on_arrival : Callable[[], None] or None, optional
-            Optional hook invoked after the room change but before rendering
-            (used for puzzle roll-ins and flavor-chain wiring).
+        on_arrival : RoomEntryHandler or None, optional
+            Optional room-entry hook invoked after the room change but before
+            rendering (used for puzzle roll-ins and flavor-chain wiring).
         """
         state.current_room_id = destination_id
         if on_arrival is not None:
-            on_arrival()
+            on_arrival(engine, state)
         engine.signal_transition()
         engine.describe_current_room()
 
@@ -111,14 +368,14 @@ def register_movement_commands(
         return move_responses[message_key]
 
     room_entry_handlers = build_room_entry_handlers(
-        step1_roll_handler=lambda state: step1_roll(state),
-        step2_roll_handler=lambda state: step2_roll(state),
-        step3_roll_handler=lambda state: step3_roll(state),
-        pick_flavor_count=lambda: random.randint(2, 3),
-        sample_flavor_rooms=lambda count: random.sample(FLAVOR_ROOM_POOL, count),
+        step1_roll_handler=_run_step1_roll,
+        step2_roll_handler=_run_step2_roll,
+        step3_roll_handler=_run_step3_roll,
+        pick_flavor_count=_pick_flavor_count,
+        sample_flavor_rooms=_sample_flavor_rooms,
     )
 
-    puzzle_move_rules = build_puzzle_move_rules(step1_is_correct, step3_is_correct)
+    puzzle_move_rules = PUZZLE_MOVE_RULES
 
     def handle_move(verb: str, target: str | None, state: GameState) -> str:
         """Move the player one step in the *verb* direction.
@@ -155,9 +412,11 @@ def register_movement_commands(
         if verb not in room.exits:
             return move_responses["no_exit"]
         destination_id = room.exits[verb]
-        canned_move_response = special_move_response(destination_id, move_responses)
-        if canned_move_response is not None:
-            return canned_move_response
+        if destination_id is None:
+            return move_responses["blocked"]
+        response_key = SPECIAL_MOVE_DESTINATIONS.get(destination_id)
+        if response_key is not None:
+            return move_responses[response_key]
 
         blocked_message = bathroom_exit_block_message(room, state, move_responses)
         if blocked_message is not None:
@@ -175,13 +434,12 @@ def register_movement_commands(
         if puzzle_result is not None:
             return puzzle_result
 
+        arrival_handler = room_entry_handlers.get(destination_id)
         _commit_move(
             engine,
             destination_id,
             state,
-            partial(
-                handle_room_entry, room_entry_handlers, engine, state, destination_id
-            ),
+            arrival_handler,
         )
         return ""
 

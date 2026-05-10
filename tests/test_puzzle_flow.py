@@ -170,8 +170,8 @@ class MovementAndPuzzleFlowTest(unittest.TestCase):
         self.assertTrue(engine.state.has_flag("step2_mirror_clue_visible"))
         self.assertIn("GO LEFT", dispatch(engine, "read", "mirror"))
 
-    def test_bathroom_look_routes_targeted_room_helpers(self) -> None:
-        """Verify that look mirror and look sink dispatch to their respective room-target handlers."""
+    def test_bathroom_look_and_read_route_targeted_room_helpers(self) -> None:
+        """Verify that bathroom look/read targets dispatch to their room-target handlers."""
         engine = make_engine(start_room="bathroom")
         bathroom = engine.rooms["bathroom"]
         bathroom.attributes["sink_running"] = True
@@ -179,9 +179,11 @@ class MovementAndPuzzleFlowTest(unittest.TestCase):
 
         mirror_result = dispatch(engine, "look", "mirror")
         sink_result = dispatch(engine, "look", "sink")
+        read_result = dispatch(engine, "read", "mirror")
 
         self.assertIn("fogged", mirror_result)
         self.assertIn("Try: RINSE HANDS", sink_result)
+        self.assertIn("fogged", read_result)
         describe_mock(engine).assert_not_called()
 
     def test_exiting_bathroom_wires_exit_node_from_mirror_direction(self) -> None:

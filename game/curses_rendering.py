@@ -290,6 +290,49 @@ def append_wrapped_lines(
         lines.extend((style, line) for line in (wrapped or [initial_indent.rstrip()]))
 
 
+def _append_room_section(
+    lines: list[tuple[str, str]],
+    label: str,
+    style: str,
+    text: str,
+    width: int,
+    *,
+    initial_indent: str = "",
+    subsequent_indent: str = "",
+) -> None:
+    """Append one optional room-panel section when *text* is non-empty.
+
+    Parameters
+    ----------
+    lines : list[tuple[str, str]]
+        The accumulator list of ``(style, text)`` pairs for the panel.
+    label : str
+        Section heading text from ``UI["ui_labels"]``.
+    style : str
+        Style tag to attach to wrapped content lines.
+    text : str
+        Section body text; when empty, nothing is appended.
+    width : int
+        Maximum character width per wrapped line.
+    initial_indent : str, optional
+        String prepended to the first line of each wrapped segment.
+    subsequent_indent : str, optional
+        String prepended to continuation lines of each wrapped segment.
+    """
+    if not text:
+        return
+    lines.append(("blank", ""))
+    lines.append(("section", label))
+    append_wrapped_lines(
+        lines,
+        style,
+        text,
+        width,
+        initial_indent=initial_indent,
+        subsequent_indent=subsequent_indent,
+    )
+
+
 def build_room_lines(room_view: CurrentRoomView, inner_w: int) -> list[tuple[str, str]]:
     """Build the styled ``(style, text)`` lines for the room panel.
 
@@ -314,34 +357,31 @@ def build_room_lines(room_view: CurrentRoomView, inner_w: int) -> list[tuple[str
     ]
     append_wrapped_lines(lines, "body", room_view.description, inner_w)
 
-    if room_view.clue:
-        lines.append(("blank", ""))
-        lines.append(("section", labels["section_clue"]))
-        append_wrapped_lines(lines, "clue", room_view.clue, inner_w)
-
-    if room_view.exits:
-        lines.append(("blank", ""))
-        lines.append(("section", labels["section_exits"]))
-        append_wrapped_lines(
-            lines,
-            "exit",
-            ", ".join(room_view.exits),
-            inner_w,
-            initial_indent="  ",
-            subsequent_indent="  ",
-        )
-
-    if room_view.items:
-        lines.append(("blank", ""))
-        lines.append(("section", labels["section_items"]))
-        append_wrapped_lines(
-            lines,
-            "item",
-            ", ".join(room_view.items),
-            inner_w,
-            initial_indent="  ",
-            subsequent_indent="  ",
-        )
+    _append_room_section(
+        lines,
+        labels["section_clue"],
+        "clue",
+        room_view.clue,
+        inner_w,
+    )
+    _append_room_section(
+        lines,
+        labels["section_exits"],
+        "exit",
+        ", ".join(room_view.exits),
+        inner_w,
+        initial_indent="  ",
+        subsequent_indent="  ",
+    )
+    _append_room_section(
+        lines,
+        labels["section_items"],
+        "item",
+        ", ".join(room_view.items),
+        inner_w,
+        initial_indent="  ",
+        subsequent_indent="  ",
+    )
 
     return lines
 
