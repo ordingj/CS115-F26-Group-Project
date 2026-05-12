@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import curses
 import textwrap
+import unicodedata
 from collections.abc import Callable
 
-from game.engine import CurrentRoomView, UI
+from game.engine.engine import CurrentRoomView, UI
 
 PANEL_PAD = 2
 
@@ -26,6 +27,10 @@ COLOR_EXIT = 7
 COLOR_ITEM = 8
 COLOR_SYSTEM = 9
 COLOR_PROMPT = 10
+COLOR_HEADER_WARNING = 11
+COLOR_HEADER_DANGER = 12
+
+_DOUBLE_WIDTH_EAST_ASIAN_WIDTHS = frozenset({"A", "F", "W"})
 
 
 def init_colors() -> None:
@@ -47,6 +52,65 @@ def init_colors() -> None:
     curses.init_pair(COLOR_ITEM, curses.COLOR_WHITE, -1)
     curses.init_pair(COLOR_SYSTEM, curses.COLOR_BLUE, -1)
     curses.init_pair(COLOR_PROMPT, curses.COLOR_BLACK, curses.COLOR_CYAN)
+    curses.init_pair(COLOR_HEADER_WARNING, curses.COLOR_BLACK, curses.COLOR_YELLOW)
+    curses.init_pair(COLOR_HEADER_DANGER, curses.COLOR_WHITE, curses.COLOR_RED)
+
+
+def _cell_width(char: str) -> int:
+    """Return the terminal cell width for one character.
+
+    Parameters
+    ----------
+    char : str
+        Single character to measure.
+
+    Returns
+    -------
+    int
+        Number of terminal columns the character may occupy.
+
+    Notes
+    -----
+    Ambiguous-width glyphs are treated as double-width on purpose. Some
+    terminals render punctuation such as em dashes that way, and the curses
+    renderer should clip conservatively instead of risking a dropped line.
+    """
+    if not char or unicodedata.combining(char):
+        return 0
+    if unicodedata.category(char).startswith("C"):
+        return 0
+    if unicodedata.east_asian_width(char) in _DOUBLE_WIDTH_EAST_ASIAN_WIDTHS:
+        return 2
+    return 1
+
+
+def truncate_for_display(text: str, width: int) -> str:
+    """Return *text* trimmed to fit within *width* terminal cells.
+
+    Parameters
+    ----------
+    text : str
+        Single-line text destined for ``curses.addstr``.
+    width : int
+        Maximum terminal cell width available.
+
+    Returns
+    -------
+    str
+        Text clipped so it never exceeds the requested cell width.
+    """
+    if width <= 0:
+        return ""
+
+    cells = 0
+    clipped: list[str] = []
+    for char in text:
+        char_width = _cell_width(char)
+        if cells + char_width > width:
+            break
+        clipped.append(char)
+        cells += char_width
+    return "".join(clipped).rstrip()
 
 
 def build_system_line_set() -> set[str]:
@@ -67,7 +131,7 @@ def build_system_line_set() -> set[str]:
         intro["title"],
         intro["curses_subtitle"],
         intro["help_hint"],
-        end["press_any_key"],
+        end["press_enter_to_replay"],
     }
     art = intro.get("ascii_art", "")
     if art:
@@ -248,7 +312,11 @@ def draw_panel_title(win: curses.window, title: str, supports_color: bool) -> No
     supports_color : bool
         Whether the terminal supports colour output.
     """
-    win.addstr(0, 2, f" {title} ", color_attr(supports_color, COLOR_SECTION, bold=True))
+    _height, width = win.getmaxyx()
+    label = truncate_for_display(f" {title} ", max(0, width - 4))
+    if not label:
+        return
+    win.addstr(0, 2, label, color_attr(supports_color, COLOR_SECTION, bold=True))
 
 
 def append_wrapped_lines(
@@ -356,14 +424,9 @@ def build_room_lines(room_view: CurrentRoomView, inner_w: int) -> list[tuple[str
         ("section", labels["section_details"]),
     ]
     append_wrapped_lines(lines, "body", room_view.description, inner_w)
-
-    _append_room_section(
-        lines,
-        labels["section_clue"],
-        "clue",
-        room_view.clue,
-        inner_w,
-    )
+    if room_view.clue:
+        lines.append(("blank", ""))
+        append_wrapped_lines(lines, "clue", room_view.clue, inner_w)
     _append_room_section(
         lines,
         labels["section_exits"],
@@ -429,7 +492,12 @@ def render_boxed_panel(
         if row >= height - 2:
             break
         try:
-            win.addstr(row + 1, PANEL_PAD, line[:inner_w], attr_for_style(style))
+            win.addstr(
+                row + 1,
+                PANEL_PAD,
+                truncate_for_display(line, inner_w),
+                attr_for_style(style),
+            )
         except curses.error:
             pass
     win.refresh()

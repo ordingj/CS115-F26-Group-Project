@@ -47,7 +47,7 @@ class BuildWorldIsolationTest(unittest.TestCase):
                 "forward": "bathroom",
                 "left": None,
                 "right": None,
-                "back": None,
+                "back": "intersection_4way",
             },
             "bathroom": {"back": "intersection_3way_exit"},
             "intersection_3way_exit": {

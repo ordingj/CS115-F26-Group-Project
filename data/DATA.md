@@ -18,9 +18,10 @@ hardcoded narrative strings; all user-facing text lives here.
 
 ## commands.yaml
 
-**Loaded by:** `game/basic_commands.py`, `game/bathroom.py`, `game/janitor.py`,
-`game/player_commands.py`, `game/player_movement.py`, `game/engine.py`,
-`game/curses_engine.py`, `game/curses_rendering.py`
+**Loaded by:** `game/commands/basic_commands.py`, `game/puzzles/bathroom.py`,
+`game/puzzles/janitor.py`, `game/commands/player_commands.py`,
+`game/commands/player_movement.py`, `game/commands/command.py`, `game/main.py`,
+`game/engine/engine.py`, `game/engine/curses_engine.py`, `game/engine/curses_rendering.py`
 
 Static response strings for every player-facing command handler. Strings that require runtime
 substitution use Python `str.format()` placeholders (e.g. `{time}`, `{verb}`, `{target}`).
@@ -40,22 +41,24 @@ responses:
 
 #### `responses.move`
 
-Movement-related feedback strings. Used by `game/player_movement.py`.
+Movement-related feedback strings. Used by `game/commands/player_movement.py`.
 
-| Key                     | Description                                                         |
-| ----------------------- | ------------------------------------------------------------------- |
-| `no_exit`               | Player tries a direction with no exit (`null` in rooms.yaml).       |
-| `blocked`               | Generic blocked-path message (sentinel `null` destination).         |
-| `lobby_forward_blocked` | Specific message for the `__lobby_forward_blocked__` sentinel.      |
-| `lobby_back_blocked`    | Specific message for the `__lobby_back_blocked__` sentinel.         |
-| `hands_not_washed`      | Player tries to leave the bathroom before washing hands (phase 0).  |
-| `hands_still_soapy`     | Player tries to leave bathroom with soap still on hands (phase 1).  |
-| `wrong_4way`            | Wrong-direction feedback at the 4-way intersection (Step 1 puzzle). |
-| `wrong_janitor`         | Wrong-direction feedback at the janitor hallway (Step 3 puzzle).    |
+| Key                      | Description                                                         |
+| ------------------------ | ------------------------------------------------------------------- |
+| `no_exit`                | Player tries a direction with no exit (`null` in rooms.yaml).       |
+| `blocked`                | Generic blocked-path message (sentinel `null` destination).         |
+| `engine_not_initialised` | Defensive fallback if movement is dispatched before engine wiring.  |
+| `room_missing`           | Defensive fallback if the current room lookup unexpectedly fails.   |
+| `lobby_forward_blocked`  | Specific message for the `__lobby_forward_blocked__` sentinel.      |
+| `lobby_back_blocked`     | Specific message for the `__lobby_back_blocked__` sentinel.         |
+| `hands_not_washed`       | Player tries to leave the bathroom before washing hands (phase 0).  |
+| `hands_still_soapy`      | Player tries to leave bathroom with soap still on hands (phase 1).  |
+| `wrong_4way`             | Wrong-direction feedback at the 4-way intersection (Step 1 puzzle). |
+| `wrong_janitor`          | Wrong-direction feedback at the janitor hallway (Step 3 puzzle).    |
 
 #### `responses.look`
 
-Examine/look response strings. Used by `game/player_commands.py`.
+Examine/look response strings. Used by `game/commands/player_commands.py`.
 
 | Key                  | Description                                                     |
 | -------------------- | --------------------------------------------------------------- |
@@ -67,7 +70,7 @@ Examine/look response strings. Used by `game/player_commands.py`.
 
 #### `responses.read`
 
-Read-verb response strings. Used by `game/player_commands.py`.
+Read-verb response strings. Used by `game/commands/player_commands.py`.
 
 | Key             | Description                                                                  |
 | --------------- | ---------------------------------------------------------------------------- |
@@ -93,7 +96,7 @@ Read-verb response strings. Used by `game/player_commands.py`.
 
 #### `responses.soap`
 
-Soap-dispenser interaction. Used by `game/bathroom.py`.
+Soap-dispenser interaction. Used by `game/puzzles/bathroom.py`.
 
 | Key               | Description                                      |
 | ----------------- | ------------------------------------------------ |
@@ -103,9 +106,18 @@ Soap-dispenser interaction. Used by `game/bathroom.py`.
 | `wrong_phase`     | Attempting to apply soap in an unexpected phase. |
 | `applied`         | Soap successfully applied.                       |
 
+#### `responses.dry`
+
+Paper-towel interaction. Used by `game/puzzles/bathroom.py`.
+
+| Key              | Description                                        |
+| ---------------- | -------------------------------------------------- |
+| `no_location`    | `DRY` outside the bathroom.                        |
+| `missing_handle` | Paper towel dispenser flavor text in the bathroom. |
+
 #### `responses.rinse`
 
-Rinse-hands interaction. Used by `game/bathroom.py`.
+Rinse-hands interaction. Used by `game/puzzles/bathroom.py`.
 
 | Key               | Description                                               |
 | ----------------- | --------------------------------------------------------- |
@@ -121,7 +133,7 @@ Rinse-hands interaction. Used by `game/bathroom.py`.
 
 #### `responses.stop`
 
-Stop/pull-back-from-sink interaction. Used by `game/bathroom.py`.
+Stop/pull-back-from-sink interaction. Used by `game/puzzles/bathroom.py`.
 
 | Key             | Description                                                         |
 | --------------- | ------------------------------------------------------------------- |
@@ -167,9 +179,7 @@ Inventory command and item-interaction responses.
 
 #### `responses.quit`
 
-| Key        | Description                            |
-| ---------- | -------------------------------------- |
-| `farewell` | Message printed when the player quits. |
+- `farewell`: Message printed when the player quits or exits.
 
 #### `responses.unknown`
 
@@ -220,30 +230,42 @@ Intro/splash-screen strings used by `GameEngine._intro_banner_lines()` and `Curs
 
 #### `responses.ui_labels`
 
-Labels for the curses split-pane UI panels. Loaded into a shared `UI` dict by
-`game/curses_engine.py` and `game/curses_rendering.py`. Changing these values updates all
-visible panel headings without modifying Python code.
+Labels for the shared UI surfaces. Loaded into `UI` dictionaries by `game/engine/engine.py`,
+`game/engine/curses_engine.py`, and `game/engine/curses_rendering.py`. Changing these values
+updates the plain-text labels, curses panel headings, and header prefixes without modifying
+Python code.
 
-| Key                  | Panel/heading it controls                             |
-| -------------------- | ----------------------------------------------------- |
-| `header_time_prefix` | Prefix before the time counter in the top header bar. |
-| `panel_room`         | Title of the room-description (left) panel.           |
-| `panel_log`          | Title of the command-log (right) panel.               |
-| `section_details`    | "DETAILS" heading inside the room panel.              |
-| `section_clue`       | "CLUE" heading inside the room panel.                 |
-| `section_exits`      | "EXITS" heading inside the room panel.                |
-| `section_items`      | "YOU NOTICE" heading inside the room panel.           |
+| Key                  | Panel/heading it controls                                 |
+| -------------------- | --------------------------------------------------------- |
+| `header_time_prefix` | Prefix before the time counter in the top header bar.     |
+| `panel_room`         | Title of the room-description (left) panel.               |
+| `panel_log`          | Title of the command-log (right) panel.                   |
+| `section_details`    | "DETAILS" heading inside the room panel.                  |
+| `section_exits`      | "EXITS" heading inside the room panel.                    |
+| `section_items`      | "YOU NOTICE" heading inside the room panel.               |
+| `plain_exits_prefix` | Prefix before the exit list in the plain-text room view.  |
+| `plain_items_prefix` | Prefix before the visible-item list in plain-text mode.   |
+| `plain_time_prefix`  | Prefix before the timer line in the plain-text room view. |
+
+#### `responses.cli`
+
+CLI-facing argparse text loaded by `game/main.py`.
+
+| Key              | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `description`    | Program description shown in `--help` output. |
+| `no_curses_help` | Help text for the `--no-curses` flag.         |
 
 #### `responses.end`
 
 End-game screens. Used by `GameEngine._end_lines()`.
 
-| Key             | Condition                      | Description                              |
-| --------------- | ------------------------------ | ---------------------------------------- |
-| `won_early`     | Arrived with ≥ 5 min remaining | Player arrived early — punchline ending. |
-| `won`           | Arrived with < 5 min remaining | Player made it just in time.             |
-| `lost`          | `time_remaining == 0`          | Time expired.                            |
-| `press_any_key` | All endings                    | Exit prompt line.                        |
+| Key                     | Condition                      | Description                                       |
+| ----------------------- | ------------------------------ | ------------------------------------------------- |
+| `won_early`             | Arrived with ≥ 5 min remaining | Player arrived early — punchline ending.          |
+| `won`                   | Arrived with < 5 min remaining | Player made it just in time.                      |
+| `lost`                  | `time_remaining == 0`          | Time expired.                                     |
+| `press_enter_to_replay` | All endings                    | Replay/exit prompt shown after the ending screen. |
 
 ---
 
@@ -260,7 +282,7 @@ deep-copied on each `build_world()` call so multiple test instances don't share 
 ```yaml
 - room_id: <string> # unique key used throughout the engine
   name: <string> # short display name shown in the UI header/panel
-  description: <string> # full prose description; shown on room entry
+  description: <string> # base room prose; dynamic helpers may append to it at render time
   exits: # directional exit map; value is destination room_id
     forward: <room_id|null|sentinel>
     back: <room_id|null|sentinel>
@@ -294,23 +316,24 @@ Exits marked `null` in this file are wired dynamically by puzzle routing logic i
 
 ### Structural rooms (critical path)
 
-| `room_id`                | Display name       | Notes                                             |
-| ------------------------ | ------------------ | ------------------------------------------------- |
-| `lobby`                  | Building Lobby     | Starting room. Two sentinel exits, one real exit. |
-| `hallway_approach`       | Detour Hallway     | Linear path to the first puzzle node.             |
-| `intersection_4way`      | 4-Way Intersection | **Step 1 puzzle node.** Exits wired at runtime.   |
-| `intersection_3way`      | 3-Way Junction     | Leads to the bathroom; sides wired at runtime.    |
-| `bathroom`               | Restroom           | **Step 2 puzzle node.** Hand-washing mini-puzzle. |
-| `intersection_3way_exit` | 3-Way Junction     | Post-bathroom junction; exits wired at runtime.   |
-| `hallway_janitor`        | Janitor's Hallway  | **Step 3/4 puzzle node.** Janitor song clue.      |
-| `hallway_final`          | Final Stretch      | Linear path to the win room.                      |
-| `room_314`               | Room 314           | Win condition. Setting `is_win_room: true`.       |
+| `room_id`                | Display name       | Notes                                                                                                                                                                        |
+| ------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lobby`                  | Building Lobby     | Starting room. Two sentinel exits, one real exit.                                                                                                                            |
+| `hallway_approach`       | Detour Hallway     | On entry, both directions are rewired through 1–3 sampled detour rooms before 4-way; randomized detours prefer unused flavor rooms until the eligible pool is exhausted.     |
+| `intersection_4way`      | 4-Way Intersection | **Step 1 puzzle node.** Exits wired at runtime; the correct exit now feeds 1–3 rooms before the first 3-way, and return-only reset text comes from `attributes.return_text`. |
+| `intersection_3way`      | 3-Way Junction     | Restroom junction: `forward` leads to the bathroom, `back` returns to the 4-way; side halls are rewired on entry from the same non-repeating detour pool.                    |
+| `bathroom`               | Restroom           | **Step 2 puzzle node.** Hand-washing mini-puzzle.                                                                                                                            |
+| `intersection_3way_exit` | 3-Way Junction     | Post-bathroom junction; mirror-correct exit rewired through 1–3 rooms before janitor, still preferring unused flavor rooms first.                                            |
+| `hallway_janitor`        | Janitor's Hallway  | **Step 3/4 puzzle node.** Janitor song clue; the correct exit is rewired through 1–3 rooms before Final Stretch, still preferring unused flavor rooms first.                 |
+| `hallway_final`          | Final Stretch      | Linear path from the last detour chain to the win room.                                                                                                                      |
+| `room_314`               | Room 314           | Win condition. Setting `is_win_room: true`.                                                                                                                                  |
 
 ### Flavor rooms (wrong-way pool)
 
-Flavor rooms are sampled randomly by `player_movement.build_room_entry_handlers()` to build a
-"wrong-way chain" when the player goes the wrong direction at the 4-way intersection. After
-traversing the chain they are routed back to the junction.
+Flavor rooms are sampled randomly by `player_movement.build_room_entry_handlers()` to build
+interstitial detour chains between puzzle nodes. The sampler tracks which flavor rooms have
+already appeared in randomized detours during the current play-through and only recycles an
+older room when the current eligible unused pool runs out.
 
 | `room_id`               | Display name   |
 | ----------------------- | -------------- |
@@ -325,20 +348,21 @@ traversing the chain they are routed back to the junction.
 
 The following attribute keys are used by game logic. Not every room uses all keys.
 
-| Key                   | Type   | Used in           | Description                                     |
-| --------------------- | ------ | ----------------- | ----------------------------------------------- |
-| `one_way`             | `bool` | `lobby`           | Informational; not currently read by engine.    |
-| `is_puzzle_node`      | `bool` | puzzle rooms      | Tags the room as a puzzle step location.        |
-| `puzzle_step`         | `int`  | puzzle rooms      | Which step this room belongs to (1–4).          |
-| `is_win_room`         | `bool` | `room_314`        | Triggers win condition on entry.                |
-| `janitor_present`     | `bool` | `hallway_janitor` | Enables janitor song hint rendering.            |
-| `song_heard`          | `bool` | `hallway_janitor` | Set `true` when the player listens to the song. |
-| `sink_running`        | `bool` | `bathroom`        | Water is currently on.                          |
-| `hands_wet`           | `bool` | `bathroom`        | Hands were placed under water.                  |
-| `hands_soapy`         | `bool` | `bathroom`        | Soap has been applied.                          |
-| `hands_rinsed`        | `bool` | `bathroom`        | Hands have been rinsed.                         |
-| `stalls_locked`       | `bool` | `bathroom`        | All stalls are locked (flavour).                |
-| `mirror_clue_visible` | `bool` | `bathroom`        | Mirror clue revealed after final rinse.         |
+| Key                   | Type   | Used in             | Description                                             |
+| --------------------- | ------ | ------------------- | ------------------------------------------------------- |
+| `one_way`             | `bool` | `lobby`             | Informational; not currently read by engine.            |
+| `is_puzzle_node`      | `bool` | puzzle rooms        | Tags the room as a puzzle step location.                |
+| `puzzle_step`         | `int`  | puzzle rooms        | Which step this room belongs to (1–4).                  |
+| `return_text`         | `str`  | `intersection_4way` | Extra prose appended only after returning to the 4-way. |
+| `is_win_room`         | `bool` | `room_314`          | Triggers win condition on entry.                        |
+| `janitor_present`     | `bool` | `hallway_janitor`   | Enables janitor song hint rendering.                    |
+| `song_heard`          | `bool` | `hallway_janitor`   | Set `true` when the player listens to the song.         |
+| `sink_running`        | `bool` | `bathroom`          | Water is currently on.                                  |
+| `hands_wet`           | `bool` | `bathroom`          | Hands were placed under water.                          |
+| `hands_soapy`         | `bool` | `bathroom`          | Soap has been applied.                                  |
+| `hands_rinsed`        | `bool` | `bathroom`          | Hands have been rinsed.                                 |
+| `stalls_locked`       | `bool` | `bathroom`          | All stalls are locked (flavour).                        |
+| `mirror_clue_visible` | `bool` | `bathroom`          | Mirror clue revealed after final rinse.                 |
 
 ### `items` reference
 
@@ -420,7 +444,7 @@ Sub-conditions inside `all` use the same type/field structure as top-level condi
 
 ## puzzle.yaml
 
-**Loaded by:** `game/puzzle.py`
+**Loaded by:** `game/puzzles/intersection.py`, `game/puzzles/bathroom_view.py`
 
 Narrative text templates for the three-step puzzle clue system. All values are folded scalars
 (`>-`) that resolve to a single paragraph string.
@@ -428,8 +452,8 @@ Narrative text templates for the three-step puzzle clue system. All values are f
 ### `step1_clue_templates`
 
 Keyed by **clue type**. The correct direction for Step 1 is chosen randomly by
-`puzzle.step1_roll()` from `["left", "right", "forward"]`. The clue type is also chosen
-randomly from the keys of this section.
+`intersection.step1_roll()` from `"forward"`, `"left"`, or `"right"`. The clue type is also
+chosen randomly from the keys of this section.
 
 Placeholder tokens:
 
@@ -440,22 +464,34 @@ Placeholder tokens:
 
 | Clue type key | Visual device                                                       |
 | ------------- | ------------------------------------------------------------------- |
-| `light`       | A flickering fluorescent light marks the _wrong_ hallway.           |
+| `light`       | A flickering fluorescent light marks the correct hallway.           |
 | `sign`        | An orange CS-club flyer with an arrow points the correct way.       |
 | `shadow`      | A fleeting shadow slips around the corner in the correct direction. |
+
+### `step1_readable_targets`
+
+Alternate `READ` targets keyed by Step 1 clue type.
+
+| Key    | Description                                                        |
+| ------ | ------------------------------------------------------------------ |
+| `sign` | Accepts `flyer`, `orange flyer`, and `bake sale flyer` as aliases. |
+
+### `step2_direction_prefix`
+
+Short prefix prepended to the Step 2 direction before it is reversed for the mirror clue.
 
 ### `step2_mirror_text`
 
 A single folded-scalar string. Used by `puzzle.step2_mirror_text()`. The correct direction for
-Step 2 is the exit direction from `intersection_3way` that leads toward the janitor's hallway,
-seeded by `puzzle.step2_roll()`.
+Step 2 is the exit direction from `intersection_3way_exit` that leads into the 1–3 room
+approach chain toward the janitor hallway, seeded by `puzzle.step2_roll()`.
 
 Placeholder tokens:
 
-| Token         | Substituted with                                                      |
-| ------------- | --------------------------------------------------------------------- |
-| `{backwards}` | The direction string reversed character-by-character (e.g. `"TFEL"`). |
-| `{direction}` | The correct direction in uppercase (e.g. `"LEFT"`).                   |
+| Token         | Substituted with                                                         |
+| ------------- | ------------------------------------------------------------------------ |
+| `{backwards}` | The direction string reversed character-by-character (e.g. `"TFEL OG"`). |
+| `{direction}` | The correct direction in uppercase (e.g. `"LEFT"`).                      |
 
 ---
 

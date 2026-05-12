@@ -7,8 +7,8 @@ import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from game.engine import UI
-from tests.helpers import make_engine, make_intersection_engine
+from game.engine.engine import UI
+from tests.helpers import describe_mock, make_engine, make_intersection_engine
 
 
 class GameEngineFormattingTest(unittest.TestCase):
@@ -24,10 +24,27 @@ class GameEngineFormattingTest(unittest.TestCase):
         assert room_view is not None
         self.assertEqual(room_view.name, room.name)
         self.assertEqual(room_view.description, room.description)
-        self.assertIn("right hallway", room_view.clue)
+        self.assertIn("left hallway", room_view.clue)
         self.assertEqual(room_view.exits, ("left", "right"))
         self.assertEqual(room_view.items, ("exam poster",))
         self.assertEqual(room_view.time_remaining, "2:05")
+        self.assertNotIn("feels like a reset", room_view.description)
+
+    def test_current_room_view_only_adds_reset_line_after_return(self) -> None:
+        """Verify that the 4-way reset line only appears after the player has returned there."""
+        engine, _room = make_intersection_engine()
+
+        first_view = engine._current_room_view()
+        assert first_view is not None
+        self.assertNotIn("feels like a reset", first_view.description)
+
+        engine.state.set_flag("step1_returned_to_intersection")
+
+        returned_view = engine._current_room_view()
+
+        self.assertIsNotNone(returned_view)
+        assert returned_view is not None
+        self.assertIn("feels like a reset", returned_view.description)
 
     def test_current_room_view_uses_shared_janitor_hint_helper(self) -> None:
         """Verify that the janitor hallway clue comes through the shared janitor formatter."""
@@ -44,6 +61,19 @@ class GameEngineFormattingTest(unittest.TestCase):
         self.assertIn("Take the left hall", room_view.clue)
         self.assertIn("Take it again", room_view.clue)
         self.assertNotIn("One more line", room_view.clue)
+
+    def test_current_room_view_keeps_room_314_free_of_extra_prompt_text(self) -> None:
+        """Verify that Room 314 goes straight to the ending screen instead of adding clue text."""
+        engine = make_engine(start_room="room_314", time_remaining=240)
+        engine.state.won = True
+
+        room_view = engine._current_room_view()
+
+        self.assertIsNotNone(room_view)
+        assert room_view is not None
+        self.assertEqual(room_view.name, "Room 314")
+        self.assertEqual(room_view.clue, "")
+        self.assertEqual(room_view.exits, ())
 
     def test_current_room_clue_returns_blank_for_non_clue_rooms(self) -> None:
         """Verify that ordinary rooms contribute no dynamic clue text."""
@@ -87,7 +117,7 @@ class GameEngineFormattingTest(unittest.TestCase):
 
         output = buffer.getvalue()
         self.assertIn("[ 4-Way Intersection ]", output)
-        self.assertIn("right hallway", output)
+        self.assertIn("left hallway", output)
         self.assertIn("Exits: left, right", output)
         self.assertIn("You see: exam poster", output)
         self.assertIn("Time remaining: 2:05", output)
@@ -119,6 +149,28 @@ class GameEngineFormattingTest(unittest.TestCase):
         self.assertTrue(engine.state.quit)
         self.assertIn("The lights flicker.", output.getvalue())
         self.assertIn("Game over.", output.getvalue())
+
+    def test_run_reaches_room_314_and_handles_end_immediately(self) -> None:
+        """Verify that entering Room 314 goes straight to the ending screen."""
+        engine = make_engine(start_room="hallway_final")
+
+        with (
+            patch.object(engine, "_print_intro") as print_intro_mock,
+            patch.object(engine, "_handle_end") as handle_end_mock,
+            patch.object(engine.event_queue, "tick") as event_tick_mock,
+            patch("builtins.input", side_effect=["forward"]),
+        ):
+            engine.run()
+
+        print_intro_mock.assert_called_once_with()
+        self.assertEqual(event_tick_mock.call_count, 1)
+        self.assertEqual(engine.state.current_room_id, "room_314")
+        self.assertTrue(engine.state.won)
+        self.assertTrue(engine.state.game_over)
+        self.assertFalse(engine.state.quit)
+        self.assertEqual(engine.state.time_remaining, 600)
+        self.assertEqual(describe_mock(engine).call_count, 1)
+        handle_end_mock.assert_called_once_with()
 
 
 if __name__ == "__main__":

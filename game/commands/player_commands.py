@@ -4,20 +4,20 @@ All game verbs are registered here. Puzzle-specific verbs (RINSE, STOP,
 SOAP, LISTEN, LOOK at targets, READ) still capture ``engine_ref`` to reach
 the live engine at call time without a circular import, but the room-aware
 registry adapters now live in :mod:`game.command` instead of this module,
-and bathroom-specific command spec fragments live with the owning bathroom
-modules.
+and the bathroom/janitor-specific command spec fragments live with their
+owning modules.
 """
 
 from __future__ import annotations
 
 from game import load_yaml_data
-from game.bathroom import bathroom_room_state_commands
-from game.bathroom_view import (
+from game.puzzles.bathroom import bathroom_room_state_commands
+from game.puzzles.bathroom_view import (
     bathroom_look_target_handlers,
     bathroom_read_target_handlers,
 )
-from game.basic_commands import register_basic_commands
-from game.command import (
+from game.commands.basic_commands import register_basic_commands
+from game.commands.command import (
     CommandRegistry,
     RoomStateCommandSpec,
     RoomTargetCommandSpec,
@@ -25,9 +25,10 @@ from game.command import (
     register_room_state_command_specs,
     register_room_target_command_specs,
 )
-from game.engine import GameEngine
-from game.janitor import janitor_listen_text
-from game.player_movement import register_movement_commands
+from game.engine.engine import GameEngine
+from game.puzzles.intersection import intersection_read_target_handlers
+from game.puzzles.janitor import janitor_room_state_commands
+from game.commands.player_movement import register_movement_commands
 from game.room import Room
 from game.state import GameState
 
@@ -108,6 +109,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     detour_sign_handler = fixed_room_state_handler(_CMD["read"]["detour_sign"])
     bathroom_look_handlers = bathroom_look_target_handlers(_CMD)
     bathroom_read_handlers = bathroom_read_target_handlers(_CMD)
+    intersection_read_handlers = intersection_read_target_handlers(_CMD)
 
     room_target_commands: tuple[RoomTargetCommandSpec, ...] = (
         (
@@ -120,6 +122,7 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
             {
                 ("lobby", "sign"): detour_sign_handler,
                 ("lobby", "detour_sign"): detour_sign_handler,
+                **intersection_read_handlers,
                 **bathroom_read_handlers,
             },
             _read_fallback,
@@ -128,23 +131,9 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
 
     register_room_target_command_specs(registry, _current_room, room_target_commands)
 
-    def _listen_in_janitor_hallway(room: Room, state: GameState) -> str:
-        """Return the janitor chorus and mark the song as heard when available."""
-        heard_text = janitor_listen_text(state, _CMD["listen"]["janitor_prefix"])
-        if not heard_text:
-            return _CMD["listen"]["silence"]
-        room.attributes["song_heard"] = True
-        state.set_flag("step3_song_heard")
-        return heard_text
-
     room_state_commands: tuple[RoomStateCommandSpec, ...] = (
         *bathroom_room_state_commands(_CMD),
-        (
-            ("listen",),
-            "hallway_janitor",
-            _CMD["listen"]["silence"],
-            _listen_in_janitor_hallway,
-        ),
+        *janitor_room_state_commands(_CMD),
     )
 
     register_room_state_command_specs(registry, _current_room, room_state_commands)

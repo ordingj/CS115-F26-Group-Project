@@ -42,7 +42,8 @@ make all
 - `make lint`: runs `ruff check`.
 - `make test`: runs the full `unittest` suite.
 - `make coverage`: reruns the test suite under `coverage.py`, prints a source-file report for
-  `main.py` and `game/*.py`, and fails if any of those runtime modules is below 80% statement
+  `game/main.py`, `game/*.py`, `game/commands/*.py`, `game/engine/*.py`, and
+  `game/puzzles/*.py`, and fails if any of those runtime modules is below 80% statement
   coverage.
 - `make run`: launches the game with the default curses UI.
 - `make all`: runs format, lint, and test in sequence.
@@ -50,17 +51,23 @@ make all
 For terminals that do not support curses, run:
 
 ```bash
-python main.py --no-curses
+python -m game.main --no-curses
 ```
 
 ## Codebase conventions
 
-- Keep player-facing narrative text in `data/*.yaml`, not hardcoded in Python.
-- Prefer small, deterministic helpers in `game/` and keep orchestration in `main.py`.
+- Keep player-facing narrative, shared UI labels, clue aliases, and CLI/help text in
+  `data/*.yaml`, not hardcoded in Python.
+- When you add new player-visible YAML keys, update `data/DATA.md` so the catalog stays aligned
+  with the runtime schema.
+- Prefer small, deterministic helpers in `game/` and keep orchestration in `game/main.py`.
 - Add or update unit tests whenever command handling, puzzle state, routing, or endings change.
 - Update `TODO.md`, `CHANGELOG.md`, `README.md`, and `ARCHITECTURE.md` when completing a task.
 
 ## Testing guidance
+
+For the detailed suite map, focused command examples, and coverage-failure interpretation,
+start with `tests/TESTS.md`.
 
 - Use `tests/test_core_helpers.py` for parser/state/loader behavior.
 - Use `tests/test_puzzle_helpers.py` for bathroom, janitor, and puzzle helper behavior.

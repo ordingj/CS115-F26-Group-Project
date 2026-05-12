@@ -23,7 +23,9 @@ class CommandCoverageTest(unittest.TestCase):
             {
                 "back",
                 "check",
+                "dry",
                 "drop",
+                "exit",
                 "examine",
                 "forward",
                 "help",
@@ -45,7 +47,7 @@ class CommandCoverageTest(unittest.TestCase):
         )
 
     def test_read_open_knock_check_help_and_quit_handle_edge_cases(self) -> None:
-        """Verify edge-case handling for read, open, knock, check, help, and quit."""
+        """Verify edge-case handling for read, open, knock, check, help, and quit aliases."""
         engine = make_engine()
 
         self.assertEqual(dispatch(engine, "read"), "Read what?")
@@ -66,6 +68,28 @@ class CommandCoverageTest(unittest.TestCase):
         self.assertTrue(engine.state.quit)
         self.assertTrue(engine.state.game_over)
 
+        exit_engine = make_engine()
+        exit_result = dispatch(exit_engine, "exit")
+
+        self.assertEqual(exit_result, "You give up and head home. Game over.")
+        self.assertTrue(exit_engine.state.quit)
+        self.assertTrue(exit_engine.state.game_over)
+
+    def test_read_flyer_uses_active_step1_sign_clue(self) -> None:
+        """Verify that READ FLYER works at the 4-way only when the flyer clue is active."""
+        engine = make_engine(start_room="intersection_4way")
+        engine.state.active_clues.update(
+            {
+                "step1_correct_dir": "left",
+                "step1_clue_type": "sign",
+            }
+        )
+
+        result = dispatch(engine, "read", "flyer")
+
+        self.assertIn("CS CLUB BAKE SALE", result)
+        self.assertIn("pointing left", result)
+
     def test_room_gated_commands_return_missing_location_responses(self) -> None:
         """Verify that bathroom and janitor verbs still return their out-of-room fallback text."""
         engine = make_engine(start_room="lobby")
@@ -81,9 +105,20 @@ class CommandCoverageTest(unittest.TestCase):
             dispatch(engine, "soap", "hands"), "There's no soap dispenser here."
         )
         self.assertEqual(
+            dispatch(engine, "dry", "hands"), "There's nothing to dry here."
+        )
+        self.assertEqual(
             dispatch(engine, "listen"),
             "You listen carefully. The building hums with an uneasy silence.",
         )
+
+    def test_dry_hands_in_bathroom_reports_missing_paper_towel_handle(self) -> None:
+        """Verify that DRY HANDS in the bathroom returns the dispenser flavor text."""
+        engine = make_engine(start_room="bathroom")
+
+        result = dispatch(engine, "dry", "hands")
+
+        self.assertEqual(result, "The paper towel dispenser's handle is missing.")
 
 
 class InventoryTest(unittest.TestCase):

@@ -12,13 +12,12 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 
-from game.bathroom_view import bathroom_exit_block_message
-from game.command import CommandRegistry
-from game.engine import GameEngine
-from game.puzzle import (
-    step1_roll,
-    step2_roll,
-    step3_roll,
+from game.puzzles.bathroom import bathroom_exit_block_message, step2_roll
+from game.commands.command import CommandRegistry
+from game.engine.engine import GameEngine
+from game.puzzles.intersection import step1_roll
+from game.puzzles.janitor import step3_roll
+from game.puzzles.puzzle import (
     clue_direction_matches,
 )
 from game.room import Room
@@ -111,9 +110,45 @@ def _pick_flavor_count() -> int:
     return random.randint(2, 3)
 
 
-def _sample_flavor_rooms(count: int) -> list[str]:
-    """Return a randomized subset of flavor rooms for the detour chain."""
-    return random.sample(FLAVOR_ROOM_POOL, count)
+def _pick_hallway_detour_count() -> int:
+    """Return the randomized detour length for one short interstitial chain."""
+    return random.randint(1, 3)
+
+
+def _sample_flavor_rooms(
+    state: GameState,
+    count: int,
+    excluded_room_ids: set[str] | None = None,
+) -> list[str]:
+    """Return one detour chain, preferring unused interstitial rooms first."""
+    excluded = excluded_room_ids or set()
+    selected: list[str] = []
+
+    while len(selected) < count:
+        unused_pool = [
+            room_id
+            for room_id in FLAVOR_ROOM_POOL
+            if room_id not in excluded
+            and room_id not in state.used_interstitial_room_ids
+            and room_id not in selected
+        ]
+        if unused_pool:
+            draw_count = min(count - len(selected), len(unused_pool))
+            chosen = random.sample(unused_pool, draw_count)
+            selected.extend(chosen)
+            state.used_interstitial_room_ids.update(chosen)
+            continue
+
+        recycle_pool = [
+            room_id
+            for room_id in FLAVOR_ROOM_POOL
+            if room_id not in excluded and room_id not in selected
+        ]
+        chosen = random.sample(recycle_pool, count - len(selected))
+        selected.extend(chosen)
+        state.used_interstitial_room_ids.update(chosen)
+
+    return selected
 
 
 def _validate_direction_puzzle_move(
@@ -177,9 +212,15 @@ def _route(exits: dict[str, str | None], correct: str, yes: str, no: str) -> Non
 def _wire_flavor_chain(
     engine: GameEngine, chain: list[str], return_room_id: str
 ) -> None:
-    """Wire each sampled flavor room toward the next detour room."""
+    """Wire each sampled flavor room toward the next detour room.
+
+    Interstitial flavor rooms always expose both ``forward`` and ``back`` so
+    either direction keeps the player moving through the detour chain until
+    they hit the configured return room.
+    """
     for room_id, next_id in zip(chain, chain[1:] + [return_room_id]):
         engine.rooms[room_id].exits["forward"] = next_id
+        engine.rooms[room_id].exits["back"] = next_id
 
 
 def _roll_once(
@@ -217,8 +258,10 @@ def _enter_configured_room(
         spec.wrong_destination,
     )
     if spec.wrong_way_return_room_id is not None:
-        engine.rooms[spec.wrong_destination].exits["forward"] = (
-            spec.wrong_way_return_room_id
+        _wire_flavor_chain(
+            engine,
+            [spec.wrong_destination],
+            spec.wrong_way_return_room_id,
         )
 
 
@@ -227,23 +270,89 @@ def build_room_entry_handlers(
     step1_roll_handler: Callable[[GameState], None],
     step2_roll_handler: Callable[[GameState], None],
     step3_roll_handler: Callable[[GameState], None],
+    pick_hallway_detour_count: Callable[[], int],
     pick_flavor_count: Callable[[], int],
-    sample_flavor_rooms: Callable[[int], list[str]],
+    sample_flavor_rooms: Callable[[GameState, int, set[str] | None], list[str]],
 ) -> dict[str, RoomEntryHandler]:
     """Build the destination-to-handler table for puzzle room entry effects."""
 
+    def enter_hallway_approach(engine: GameEngine, state: GameState) -> None:
+        """Wire both hallway directions into a short randomized detour toward the 4-way."""
+        chain = sample_flavor_rooms(state, pick_hallway_detour_count(), None)
+        _wire_flavor_chain(engine, chain, "intersection_4way")
+        hallway_exits = engine.rooms["hallway_approach"].exits
+        hallway_exits["forward"] = chain[0]
+        hallway_exits["back"] = chain[0]
+
     def enter_intersection_4way(engine: GameEngine, state: GameState) -> None:
-        """Roll Step 1, wire the flavor detour chain, and set the junction exits."""
+        """Roll Step 1 and wire both the correct and wrong routes out of the 4-way."""
+        returning_to_intersection = state.has_flag("step1_seen_intersection")
+        state.set_flag("step1_seen_intersection")
+        if returning_to_intersection:
+            state.set_flag("step1_returned_to_intersection")
         step1_roll_handler(state)
         correct_dir = state.active_clues["step1_correct_dir"]
-        chain = sample_flavor_rooms(pick_flavor_count())
-        _wire_flavor_chain(engine, chain, "intersection_4way")
+        correct_chain = sample_flavor_rooms(
+            state,
+            pick_hallway_detour_count(),
+            None,
+        )
+        wrong_chain = sample_flavor_rooms(
+            state,
+            pick_flavor_count(),
+            set(correct_chain),
+        )
+        _wire_flavor_chain(engine, correct_chain, "intersection_3way")
+        _wire_flavor_chain(engine, wrong_chain, "intersection_4way")
         _route(
             engine.rooms["intersection_4way"].exits,
             correct_dir,
-            "intersection_3way",
-            chain[0],
+            correct_chain[0],
+            wrong_chain[0],
         )
+
+    def enter_intersection_3way(engine: GameEngine, state: GameState) -> None:
+        """Wire the visible side halls into a short detour that loops back to the junction."""
+        chain = sample_flavor_rooms(state, pick_hallway_detour_count(), None)
+        _wire_flavor_chain(engine, chain, "intersection_3way")
+        junction_exits = engine.rooms["intersection_3way"].exits
+        junction_exits["forward"] = "bathroom"
+        junction_exits["back"] = "intersection_4way"
+        junction_exits["left"] = chain[0]
+        junction_exits["right"] = chain[0]
+
+    def enter_intersection_3way_exit(engine: GameEngine, state: GameState) -> None:
+        """Route the mirror-correct exit through a short detour before janitor."""
+        chain = sample_flavor_rooms(
+            state,
+            pick_hallway_detour_count(),
+            {"flavor_copy_room"},
+        )
+        _wire_flavor_chain(engine, chain, "hallway_janitor")
+        _route(
+            engine.rooms["intersection_3way_exit"].exits,
+            state.active_clues.get("step2_mirror_dir", ""),
+            chain[0],
+            "flavor_copy_room",
+        )
+        _wire_flavor_chain(engine, ["flavor_copy_room"], "intersection_3way_exit")
+
+    def enter_hallway_janitor(engine: GameEngine, state: GameState) -> None:
+        """Route the song-correct exit through a short detour before the final stretch."""
+        _roll_once(state, "step3_rolled", step3_roll_handler)
+        chain = sample_flavor_rooms(
+            state,
+            pick_hallway_detour_count(),
+            {"flavor_copy_room"},
+        )
+        _wire_flavor_chain(engine, chain, "hallway_final")
+        _route(
+            engine.rooms["hallway_janitor"].exits,
+            state.active_clues.get("step3_correct_dir", ""),
+            chain[0],
+            "flavor_copy_room",
+        )
+        _wire_flavor_chain(engine, ["flavor_copy_room"], "hallway_janitor")
 
     def enter_room_314(_engine: GameEngine, state: GameState) -> None:
         """Mark the game as won when the player reaches Room 314."""
@@ -257,21 +366,6 @@ def build_room_entry_handlers(
             roll_handler=step2_roll_handler,
             room_attribute_updates={"sink_running": True},
         ),
-        _ConfiguredRoomEntrySpec(
-            room_id="intersection_3way_exit",
-            clue_key="step2_mirror_dir",
-            correct_destination="hallway_janitor",
-            wrong_destination="flavor_copy_room",
-        ),
-        _ConfiguredRoomEntrySpec(
-            room_id="hallway_janitor",
-            clue_key="step3_correct_dir",
-            correct_destination="hallway_final",
-            wrong_destination="flavor_copy_room",
-            wrong_way_return_room_id="hallway_janitor",
-            rolled_flag="step3_rolled",
-            roll_handler=step3_roll_handler,
-        ),
     )
 
     configured_handlers: dict[str, RoomEntryHandler] = {
@@ -283,7 +377,11 @@ def build_room_entry_handlers(
     }
 
     return {
+        "hallway_approach": enter_hallway_approach,
         "intersection_4way": enter_intersection_4way,
+        "intersection_3way": enter_intersection_3way,
+        "intersection_3way_exit": enter_intersection_3way_exit,
+        "hallway_janitor": enter_hallway_janitor,
         **configured_handlers,
         "room_314": enter_room_314,
     }
@@ -331,8 +429,9 @@ def register_movement_commands(
         state.current_room_id = destination_id
         if on_arrival is not None:
             on_arrival(engine, state)
-        engine.signal_transition()
-        engine.describe_current_room()
+        if engine.should_render_arrival_room():
+            engine.signal_transition()
+            engine.describe_current_room()
 
     def _bounce_wrong_way(
         engine: GameEngine,
@@ -371,6 +470,7 @@ def register_movement_commands(
         step1_roll_handler=_run_step1_roll,
         step2_roll_handler=_run_step2_roll,
         step3_roll_handler=_run_step3_roll,
+        pick_hallway_detour_count=_pick_hallway_detour_count,
         pick_flavor_count=_pick_flavor_count,
         sample_flavor_rooms=_sample_flavor_rooms,
     )
@@ -405,10 +505,10 @@ def register_movement_commands(
         """
         engine = engine_ref[0]
         if engine is None:
-            return "Error: engine not initialised."
+            return move_responses["engine_not_initialised"]
         room = engine.current_room()
         if room is None:
-            return "You are nowhere."
+            return move_responses["room_missing"]
         if verb not in room.exits:
             return move_responses["no_exit"]
         destination_id = room.exits[verb]

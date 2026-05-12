@@ -1,6 +1,194 @@
 # Changelog
 
+## 2026-05-12
+
+- Docs — add `tests/TESTS.md` as the canonical test-running guide, including the suite map,
+  focused `unittest` examples, the `make coverage` workflow, and coverage-failure
+  interpretation notes. Sync the README, developer guide, and architecture notes to point to
+  the new reference.
+
+- Fix — keep the curses room and activity panels visible after the live-countdown work by
+  continuing to read keystrokes from the input subwindow instead of `stdscr`. Reading from the
+  root window triggered an implicit refresh that blanked the child panels on the real terminal.
+
+- Feature — add a live curses countdown in the header by anchoring the session timer to a
+  monotonic deadline and polling once per second while the input bar waits for keys. The
+  existing 15-second action penalty still applies, and the timer now turns yellow below 5:00
+  and red below 1:00. Focused core-helper and curses-helper coverage guards the new behavior.
+
+- Fix — stop the curses header, room, and activity panels from stealing cursor focus during
+  refreshes by marking the non-input windows `leaveok`. The prompt cursor now stays anchored in
+  the command bar instead of jumping up to the timer/header during redraws.
+
+- Fix — harden the curses panel renderer against terminal cell-width overruns so the
+  `hallway_final -> room_314` ending screen no longer risks dropping its text on narrower
+  terminals when wide punctuation is present. The shared renderer now clips by display width
+  instead of raw character count, and focused curses-helper coverage guards the regression.
+
+## 2026-05-11
+
+- Docs — finish the YAML documentation audit by moving the last player-facing fallback, label,
+  clue-alias, and CLI strings out of Python into `commands.yaml` and `puzzle.yaml`, then sync
+  the data catalog plus architecture/developer notes.
+
+- Docs — finish the remaining repo-wide Python docstring pass by documenting the last private
+  curses helper plus local test helpers, then validate the touched suites and a saved-file AST
+  audit.
+
+- Maintenance — finish wiring the moved package layout by fixing `game/main.py` imports, adding
+  package markers for `game/commands`, `game/engine`, and `game/puzzles`, updating the Makefile
+  plus current docs to use `python -m game.main` and the nested module tree, and repointing
+  focused tests to the moved module paths.
+
+- Docs — scaffold `SLIDES.md` with a presentation-ready outline for the project summary,
+  architecture, agentic development workflow, and testing strategy, and document the slide deck
+  in the repo docs.
+
+- QA — revalidate the `hallway_final -> room_314` end-screen path in both the plain-text and
+  curses engines with focused tests, confirming the previously reported blank-screen bug is no
+  longer present.
+
+- Refactor — remove the duplicated target-required `open`/`knock` handlers in
+  `game/basic_commands.py` by routing both verbs through one shared response factory, keeping
+  focused command-flow coverage green.
+
+- Refactor — replace the overlapping ambient/listen janitor chorus wrappers with one shared
+  `janitor_text()` formatter in `game/janitor.py`, update the engine and listen path to use it,
+  and keep focused janitor helper plus engine-view tests green.
+
+## 2026-05-10
+
+- Fix — stop treating the `hallway_final -> room_314` move like a normal room render in the
+  curses UI. The end screen now owns that transition: the ending text renders in the `LOCATION`
+  panel, the replay/exit prompt renders in the `ACTIVITY` panel, and focused engine-helper,
+  curses-helper, and puzzle-flow tests stay green.
+
+- Polish — restore the end-of-game flow so entering Room 314 immediately shows the correct
+  ending text based on the remaining time, then waits on an explicit Enter-to-replay prompt
+  instead of requiring an extra in-room command. Focused core-helper, ending, engine-helper,
+  puzzle-flow, and curses-helper tests stay green.
+
+- Polish — make the ending prompt explicitly describe both replay and exit behavior, and add
+  focused plain/curses ending tests that verify every ending variant renders and waits for
+  player input. Focused ending and curses-helper tests stay green.
+
+- Polish — track randomized interstitial flavor rooms across the whole play-through so detour
+  chains prefer unused rooms and only recycle previously seen ones when the eligible unused
+  pool runs out. Focused core-helper and puzzle-flow tests stay green.
+
+- Polish — replace the inaccurate `Right Hand Man` janitor chorus entry with original
+  right-direction clue text so the Step 3 song pool stays consistent. Focused puzzle-helper
+  tests stay green.
+
+- Polish — add 1–3 room interstitial chains on the remaining direct mainline hops so the
+  correct Step 1 route reaches the first 3-way through detours and the janitor clue now routes
+  through detours before Final Stretch. Focused puzzle-flow tests stay green.
+
+- Polish — make the 4-way flickering-light clue mark the correct hallway instead of the wrong
+  one, so the visual hint now agrees with the Step 1 puzzle solution. Focused puzzle-helper
+  tests stay green.
+
+- Polish — redraw the curses activity panel after room transitions so the lower panel no longer
+  disappears when a fade-to-black room change erases both windows. Focused curses-helper tests
+  stay green.
+
+- Polish — flush pending curses input before waiting on the final end-screen keypress so the
+  Enter used to reach `room_314` cannot immediately dismiss the win screen and look like a
+  crash. Focused curses-helper tests stay green.
+
+- Polish — add a 1–3 room interstitial chain between the post-bathroom 3-way junction and the
+  janitor hallway, so the mirror-correct exit no longer jumps there directly. Focused
+  puzzle-flow tests stay green.
+
+- Polish — wire the initial 3-way junction's visible side halls on entry so `left` and `right`
+  both appear in the UI and feed a short detour chain that loops back to the same junction.
+  Focused puzzle-flow tests stay green.
+
+- Polish — wire sampled interstitial detour rooms with both `forward` and `back` exits so
+  either direction keeps the player moving through the randomized chain until the next
+  intersection. Focused puzzle-flow tests stay green.
+
+- Polish — guard the curses room-transition pause so entering `room_314` no longer crashes with
+  `must call initscr() first` when a `CursesEngine` move path runs outside a live curses
+  session. Focused curses-helper tests stay green.
+
+- Polish — keep the curses command prompt in keypad-managed character input mode so arrow-key
+  presses no longer spill raw escape sequences like `^[[B` into the command line. Focused
+  curses-helper tests stay green.
+
+- Polish — add a bathroom-owned `dry` command so `DRY HANDS` returns "The paper towel
+  dispenser's handle is missing." in the restroom and a room-gated fallback elsewhere. Focused
+  command-flow tests stay green.
+
+- Polish — replace the raw `\u2014` and `\u2192` escape sequences inside folded bathroom
+  response strings with directly renderable punctuation, so those lines no longer print escape
+  codes in the UI. Focused puzzle-helper tests stay green.
+
+- Polish — keep the Step 1 shadow clue out of forward-facing rolls, so that clue now only
+  appears when the correct turn is left or right. Focused puzzle-helper tests stay green.
+
+- Polish — rewire the lobby-to-4-way Detour Hallway on entry so both visible directions feed a
+  short randomized detour chain before the 4-way, instead of exposing a single forward exit.
+  Focused puzzle-flow tests stay green.
+
+- Polish — add `exit` as a real alias for `quit`, update the help text to advertise it, and
+  keep both commands on the same graceful game-over path. Focused command-flow tests stay
+  green.
+
+- Polish — restore the initial 3-way junction's `back` exit to `intersection_4way`, so the
+  first restroom junction now shows the route the player actually came from while the
+  post-bathroom `intersection_3way_exit` node keeps its separate rewired behavior. Focused
+  world and puzzle-flow tests stay green.
+
+- Polish — add a Step 1 intersection read handler so `READ FLYER` returns the active bake-sale
+  clue text when that flyer clue is actually present, instead of falling through to the generic
+  "not here" response. Focused command-flow and puzzle-helper tests stay green.
+
+- Polish — move the 4-way intersection's "Something about this place feels like a reset." line
+  into YAML-backed room attributes and render it only after the player returns to that room,
+  keeping the first visit cleaner while preserving the reset hint on re-entry. Focused
+  engine-helper and puzzle-flow tests stay green.
+
+- Refactor — split the Step 1 four-way intersection clue generation and clue text into the new
+  `game/intersection.py` module, so `game/puzzle.py` now only carries shared clue utilities
+  while the engine and movement pipeline import Step 1 behavior from its owning domain module.
+  Focused helper, engine, and puzzle-flow tests stay green.
+
 ## 2026-05-09
+
+- UI — stop rendering the `CLUE` heading in the curses room panel while keeping the clue text
+  itself, and remove the now-unused `section_clue` UI label from YAML-backed UI data. Focused
+  curses helper tests stay green.
+
+- Refactor — move the Step 2 mirror roll into `game/bathroom.py` and the revealed mirror text
+  into `game/bathroom_view.py`, while promoting the shared left/right direction roll in
+  `game/puzzle.py` to a public utility used by both the bathroom and janitor domains. Focused
+  puzzle-helper and puzzle-flow tests stay green.
+
+- Refactor — move `step3_roll()` and the janitor song-pool loader into `game/janitor.py`, so
+  the Step 3 song clue generation, formatting, and janitor-specific command wiring now live in
+  one owning module instead of being split across `game/janitor.py` and `game/puzzle.py`.
+  Focused puzzle-helper and puzzle-flow tests stay green.
+
+- Refactor — move the Step 2 bathroom response-key mapping and exit blocker into
+  `game/bathroom.py`, so `game/player_movement.py` no longer depends on `game/bathroom_view.py`
+  for gameplay gating and the view module stays limited to read-only presentation helpers.
+  Focused bathroom helper and puzzle-flow tests stay green.
+
+- Refactor — move the janitor hallway `listen` command spec into `game/janitor.py`, so
+  `game/player_commands.py` no longer owns the last Step 3 room-gated command closure and the
+  janitor module now owns both clue formatting and its command-registration fragment. Focused
+  janitor helper, command-flow, and puzzle-flow tests stay green.
+
+- Refactor — promote the shared Step 2 bathroom puzzle snapshot to a public API in
+  `game/bathroom.py`, so `game/bathroom_view.py` no longer depends on underscore-prefixed
+  cross-module helpers while both modules still share the same owning puzzle-state surface.
+  Focused bathroom helper and command-flow tests stay green.
+
+- Refactor — move the shared Step 2 bathroom puzzle snapshot helpers into `game/bathroom.py`,
+  so the mutating and read-only bathroom modules stop crossing an inverted private dependency
+  and both now read the same owning state helper. Focused bathroom helper and command-flow
+  tests stay green.
 
 - Refactor — move the bathroom-specific command spec fragments out of `game/player_commands.py`
   and into `game/bathroom.py` plus `game/bathroom_view.py`, so the player command builder now

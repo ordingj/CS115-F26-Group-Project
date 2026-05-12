@@ -1,6 +1,6 @@
 # CS115 S26 Group Project - **Final Exam: Room 314**
 
-Group Members: Joseph Ording, Raj, Jerry, Matthew
+Group Members: Joseph Ording
 
 ## Game overview
 
@@ -18,13 +18,13 @@ banner. A plain-text fallback is also available for terminals that do not suppor
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python main.py
+python -m game.main
 ```
 
 Run the plain-text fallback instead of the curses UI:
 
 ```bash
-python main.py --no-curses
+python -m game.main --no-curses
 ```
 
 ## Requirements
@@ -46,11 +46,15 @@ make all
 
 `make all` runs formatting, linting, and the full unit-test suite in sequence. `make coverage`
 reruns the unit-test suite under coverage reporting and fails if any runtime module in
-`main.py` or `game/*.py` falls below 80% statement coverage.
+`game/main.py`, `game/*.py`, `game/commands/*.py`, `game/engine/*.py`, or `game/puzzles/*.py`
+falls below 80% statement coverage.
 
 ## Gameplay summary
 
 - Goal: reach Room 314 before the ten-minute timer expires.
+- In curses mode the header now counts down live while you wait at the prompt.
+- Commands still cost 15 seconds, so the timer both ticks in real time and drops on actions.
+- The curses timer turns yellow below five minutes remaining and red below one minute.
 - Step 1: solve the four-way intersection clue to reach the restroom junction.
 - Step 2: complete the handwashing puzzle to reveal the mirror clue.
 - Step 3: use the mirror clue to find the janitor hallway.
@@ -69,28 +73,34 @@ The automated tests cover command parsing and dispatch, room navigation and bloc
 puzzle progression, YAML-driven event triggers, world-building integrity, and the win/lose/quit
 end states. When a large diff introduces new source or test files, prefer `make all coverage`
 for the final verification pass so lint, tests, and the per-file coverage threshold run
-together.
+together. See `tests/TESTS.md` for the suite-by-suite map, focused `unittest` commands, and
+coverage-failure interpretation guide.
 
 ## Project structure
 
 ```text
-main.py              # Entry point; builds rooms, commands, events, and starts the engine
 game/
   __init__.py        # Shared package helpers for loading YAML assets from data/
-  basic_commands.py  # Simple stateless and inventory command registrations
-  bathroom.py        # Shared bathroom puzzle helpers used by the command layer
-  janitor.py         # Shared janitor song-clue formatting helpers
-  player_commands.py # Command assembly plus non-movement room-target and interaction handlers
-  player_movement.py # Movement verbs plus puzzle routing, validation, and room-entry side effects
-  curses_rendering.py # Shared panel, wrapping, and style helpers for the curses UI
+  main.py            # Composition root; builds rooms, commands, events, and starts the engine
+  commands/
+    basic_commands.py   # Simple stateless and inventory command registrations
+    command.py          # Command, parser, registry, and shared handler adapters
+    player_commands.py  # Command assembly plus non-movement room-target handlers
+    player_movement.py  # Movement verbs plus puzzle routing and room-entry side effects
+  engine/
+    engine.py           # Plain-text game loop and shared room-presentation helpers
+    curses_engine.py    # Split-pane curses UI with boxed panels and color-coded log styling
+    curses_rendering.py # Shared panel, wrapping, and style helpers for the curses UI
+  puzzles/
+    bathroom.py         # Step 2 state, clue-roll, and bathroom action helpers
+    bathroom_view.py    # Read-only bathroom clue and room-target helpers
+    intersection.py     # Step 1 four-way clue roll and clue text helpers
+    janitor.py          # Step 3 song-roll, formatting, and janitor command helpers
+    puzzle.py           # Shared clue-storage and direction-matching helpers
   room.py            # Room dataclass (exits, items, attributes)
-  command.py         # Command, parser, registry, and shared command-handler adapters
   event.py           # Event, EventQueue (time/state-triggered narrative beats)
   state.py           # GameState (time, location, puzzle step, flags)
-  puzzle.py          # Randomized clue generation and puzzle helpers
   world.py           # YAML-backed room loading and world construction
-  engine.py          # Plain-text game loop and shared room-presentation helpers
-  curses_engine.py   # Split-pane curses UI with boxed panels and color-coded log styling
 data/
   rooms.yaml         # Room graph and room metadata
   commands.yaml      # Player-facing command responses and UI strings
@@ -109,6 +119,7 @@ tests/
   test_endings.py        # Win, loss, weird ending, and quit output coverage
   test_world.py          # World-build regression tests and room-map assertions
 Makefile               # Format, lint, test, and run targets
+SLIDES.md              # Presentation scaffold for summary, architecture, workflow, and testing
 STORY.md               # Narrative design notes and early puzzle planning
 ```
 
@@ -116,5 +127,6 @@ STORY.md               # Narrative design notes and early puzzle planning
 
 - Movement: `forward`, `back`, `left`, `right`
 - Observation: `look [item]`, `examine [item]`, `read [item]`, `listen`, `check watch`
-- Interaction: `open [item]`, `knock [item]`, `soap hands`, `rinse hands`, `wash hands`, `stop`
-- Utility: `help`, `quit`
+- Interaction: `open [item]`, `knock [item]`, `soap hands`, `rinse hands`, `wash hands`,
+  `dry hands`, `stop`
+- Utility: `help`, `quit`, `exit`

@@ -2,6 +2,24 @@
 
 # Project Tasklist
 
+- [x] tests/TESTS.md - document test strategy, coverage, and instructions for running tests and
+      interpreting results - [x] Added `tests/TESTS.md` as the canonical testing reference,
+      including the suite map, focused `unittest` commands, the `make coverage` workflow, and
+      guidance for interpreting failures.
+
+- [x] implement the live curses countdown in the header, including warning colors for low time
+  - [x] Added a live monotonic countdown for the curses session, kept the existing 15-second
+        action penalty, and switched the timer color to yellow below 5:00 and red below 1:00.
+        Focused core-helper and curses-helper tests cover the deadline sync, idle input
+        polling, and threshold colors.
+
+- [x] verify the `hallway_final -> room_314` transition shows the ending instead of a blank
+      screen in both the plain-text and curses engines
+  - [x] Hardened the shared curses renderer to clip by terminal cell width instead of raw
+        character count, preventing the `room_314` end screen from silently dropping its text
+        on narrower terminals when wide punctuation is present. Added focused curses regression
+        coverage for the narrow-width render path.
+
 - [x] create data/DATA.md - catalog the yaml files; detailed descriptions of
       structure/fields/entries, etc with examples; list all possible values when feasible, or
       point to source (i.e. list of commands, etc.)
@@ -14,18 +32,6 @@
       need to do a great job here
 
 - [x] documentation updates:
-  - [x] update README.md with end-user relevant information (game description, how to run,
-        commands, etc.)
-  - [x] update ARCHITECTURE.md with developer-relevant information (code structure, design
-        decisions, etc.)
-  - [x] ensure CHANGELOG.md has clear, concise entries for all significant changes made during
-        development
-  - [x] DEVELOPER.md should contain any necessary setup instructions, coding conventions, and
-        guidelines for contributing to the codebase
-  - [x] add docstrings to all functions and methods, describing their purpose, parameters,
-        return values, and any notable edge-case behaviour; add module-level docstrings where
-        appropriate; add copious inline comments explaining complex logic and design decisions
-        throughout the codebase
   - [x] there should be no narrative text or user-facing strings hardcoded in the Python; all
         such text should be loaded from YAML files at runtime, with clear keys and structure to
         make it easy to understand and edit the narrative content without touching the code
@@ -126,7 +132,7 @@
 - [x] framework:
   - [x] define asset types: rooms, commands, events (`game/room.py`, `game/command.py`,
         `game/event.py`)
-  - [x] define commands: movement, actions, etc. (`main.py` – `build_commands`)
+  - [x] define commands: movement, actions, etc. (`game/main.py` – `build_commands`)
   - [x] define states: time, location, puzzle states (`game/state.py`)
 
 - [x] Build out full room map (lobby → hallways → bathroom → Room 314)

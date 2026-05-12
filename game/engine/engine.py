@@ -124,6 +124,16 @@ class GameEngine:
         trigger effects such as a fade-to-black between rooms.
         """
 
+    def should_render_arrival_room(self) -> bool:
+        """Return whether a committed move should redraw the destination room.
+
+        The plain-text engine skips the redraw once an arrival hook has
+        already ended the game so the run loop can go straight to the ending
+        screen.  UI-specific subclasses can override this when they need to
+        present the destination room before their dedicated end-screen flow.
+        """
+        return not self.state.game_over
+
     def describe_current_room(self) -> None:
         """Print the current room's name, description, exits, and visible items.
 

@@ -18,8 +18,8 @@ test:
 coverage:
 	$(PYTHON) -m coverage erase
 	$(PYTHON) -m coverage run -m unittest discover -s tests -t .
-	$(PYTHON) -m coverage report --include='main.py,game/*.py'
-	$(PYTHON) tests/check_coverage_threshold.py --threshold 80 main.py game/*.py
+	$(PYTHON) -m coverage report --include='game/main.py,game/*.py,game/commands/*.py,game/engine/*.py,game/puzzles/*.py'
+	$(PYTHON) tests/check_coverage_threshold.py --threshold 80 game/main.py game/*.py game/commands/*.py game/engine/*.py game/puzzles/*.py
 
 run:
-	$(PYTHON) main.py
+	$(PYTHON) -m game.main

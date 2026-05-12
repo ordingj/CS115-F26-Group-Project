@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING
 
+from game import load_yaml_data
+
 if TYPE_CHECKING:
     from game.room import Room
     from game.state import GameState
@@ -97,7 +99,7 @@ class CommandParser:
 class CommandRegistry:
     """Maps verb strings to handler functions."""
 
-    def __init__(self, unknown_message: str = "I don't know how to '{verb}'.") -> None:
+    def __init__(self, unknown_message: str | None = None) -> None:
         """Initialise an empty registry.
 
         Parameters
@@ -110,7 +112,9 @@ class CommandRegistry:
             dependency (useful for unit tests).
         """
         self._handlers: dict[str, CommandHandler] = {}
-        self._unknown_message = unknown_message
+        self._unknown_message = (
+            unknown_message or load_yaml_data("commands.yaml")["responses"]["unknown"]
+        )
 
     def register(self, verb: str, handler: CommandHandler) -> None:
         """Associate *verb* (case-insensitive) with *handler*.

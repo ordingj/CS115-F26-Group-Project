@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import time
 from dataclasses import dataclass, field
 
 
@@ -20,10 +22,14 @@ class GameState:
         ID of the room the player is currently in.  Must match a key in the
         rooms dictionary returned by :func:`~game.world.build_world`.
     time_remaining : int
-        Seconds left before the game ends in a loss.  Counts down by
-        ``seconds_per_action`` after each player command.
+        Seconds left before the game ends in a loss. In live countdown mode
+        this value is synchronised from a monotonic deadline; otherwise it
+        falls back to the older command-based decrement model used by some
+        tests and non-curses paths.
     seconds_per_action : int
-        Clock cost (in seconds) deducted from ``time_remaining`` per command.
+        Extra time penalty (in seconds) applied per command. When no live
+        deadline is active, this is the raw decrement applied by
+        :meth:`tick`.
     puzzle_step : int
         Current step in the main puzzle sequence.  ``0`` = not yet started;
         ``1`` = four-way solved; ``3`` = janitor puzzle solved.
@@ -35,16 +41,24 @@ class GameState:
         (e.g. ``"step2_hands_washed"``).
     inventory : list[str]
         Item names the player is currently carrying.
+    used_interstitial_room_ids : set[str]
+        Randomized interstitial flavor rooms already consumed during this
+        play-through; new detours prefer rooms outside this set until the
+        eligible unused pool is exhausted.
     move_count : int
         Total number of player commands executed this session.
     wrong_turns : int
         Number of times the player chose the wrong puzzle direction.
     game_over : bool
-        ``True`` once any terminal condition (timeout, win, quit) is reached.
+        ``True`` once any terminal condition (timeout, quit, or post-win
+        acknowledgement) is reached.
     won : bool
         ``True`` if the player successfully reached Room 314 in time.
     quit : bool
         ``True`` if the player voluntarily quit via the quit command.
+    replay_requested : bool
+        ``True`` when the ending screen requests a fresh play-through after
+        the current session ends.
     """
 
     # ── location ──────────────────────────────────────────────────────────────
@@ -66,6 +80,8 @@ class GameState:
         default_factory=lambda: ["watch", "backpack", "phone", "keys", "wallet"]
     )
 
+    used_interstitial_room_ids: set[str] = field(default_factory=set)
+
     # ── session counters ──────────────────────────────────────────────────────
     move_count: int = 0
     wrong_turns: int = 0
@@ -74,16 +90,64 @@ class GameState:
     game_over: bool = False
     won: bool = False
     quit: bool = False
+    replay_requested: bool = False
+    _deadline_monotonic: float | None = field(default=None, init=False, repr=False)
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
-    def tick(self) -> None:
+    def start_countdown(self, *, now: float | None = None) -> None:
+        """Start a live countdown anchored to the current monotonic clock.
+
+        Parameters
+        ----------
+        now : float or None, optional
+            Monotonic timestamp to use as the countdown anchor. Defaults to
+            :func:`time.monotonic` when omitted.
+        """
+        if self.won or self.quit or self.game_over:
+            return
+        current_time = time.monotonic() if now is None else now
+        self._deadline_monotonic = current_time + max(self.time_remaining, 0)
+
+    def sync_time(self, *, now: float | None = None) -> bool:
+        """Synchronise ``time_remaining`` from the live countdown deadline.
+
+        Parameters
+        ----------
+        now : float or None, optional
+            Monotonic timestamp to evaluate against the live deadline.
+
+        Returns
+        -------
+        bool
+            ``True`` when the visible remaining time changed.
+        """
+        if self._deadline_monotonic is None or self.won or self.quit:
+            return False
+
+        current_time = time.monotonic() if now is None else now
+        remaining = max(0, math.ceil(self._deadline_monotonic - current_time))
+        changed = remaining != self.time_remaining
+        self.time_remaining = remaining
+        if remaining == 0:
+            self.game_over = True
+        return changed
+
+    def tick(self, *, now: float | None = None) -> None:
         """Advance the clock by one action's worth of time.
 
-        Subtracts ``seconds_per_action`` from ``time_remaining`` and
-        increments ``move_count``.  When time hits zero the clock is clamped
-        and ``game_over`` is set so the engine exits its main loop.
+        In live countdown mode the action cost is applied by shifting the
+        deadline earlier, then synchronising ``time_remaining`` from that
+        deadline. Otherwise the method falls back to directly decrementing
+        ``time_remaining`` by ``seconds_per_action``.
         """
+        if self.won or self.game_over:
+            return
+        if self._deadline_monotonic is not None:
+            self._deadline_monotonic -= self.seconds_per_action
+            self.move_count += 1
+            self.sync_time(now=now)
+            return
         self.time_remaining -= self.seconds_per_action
         self.move_count += 1
         if self.time_remaining <= 0:

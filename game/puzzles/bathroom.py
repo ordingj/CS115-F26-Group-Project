@@ -1,20 +1,19 @@
-"""Bathroom Step 2 action helpers for Final Exam: Room 314.
+"""Bathroom Step 2 state and action helpers for Final Exam: Room 314.
 
-Handles the Step 2 handwashing state machine, which progresses through four
-phases (0–4) stored in ``room.attributes["wash_phase"]``:
+This module owns the shared Step 2 bathroom puzzle snapshot, the
+response-key mapping and exit-block rule derived from that snapshot, plus
+the mutating handwashing state machine, which progresses through four
+phases stored in ``room.attributes["wash_phase"]``:
 
 - **Phase 0**: Soap not yet applied; sink off.
+- **Phase 1**: Soap applied; player must stop the sink (not rinse yet).
+- **Phase 2**: Sink stopped; player must rinse.
+- **Phase 3**: Rinsed; player must stop the running sink.
+- **Phase 4**: Hands washed — ``step2_hands_washed`` flag is set.
 
- Handles the Step 2 handwashing state machine, which progresses through four
- phases (0–4) stored in ``room.attributes["wash_phase"]``:
-
- - **Phase 0**: Soap not yet applied; sink off.
- - **Phase 1**: Soap applied; player must stop the sink (not rinse yet).
- - **Phase 2**: Sink stopped; player must rinse.
- - **Phase 3**: Rinsed; player must stop the running sink.
- - **Phase 4**: Hands washed — ``step2_hands_washed`` flag is set.
-
- Read-only Step 2 presentation helpers live in :mod:`game.bathroom_view`.
+Read-only Step 2 presentation helpers in :mod:`game.bathroom_view` reuse the
+shared puzzle snapshot defined here so both modules read the same source of
+truth for sink, soap, and completion state.
 """
 
 from __future__ import annotations
@@ -24,14 +23,102 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any
 
-from game.bathroom_view import (
-    _BathroomPuzzleState,
-    _attribute_int,
-    _bathroom_puzzle_state,
-)
-from game.command import RoomStateCommandSpec
+from game.commands.command import RoomStateCommandSpec, fixed_room_state_handler
+from game.puzzles.puzzle import roll_turn_direction
 from game.room import Room
 from game.state import GameState
+
+
+@dataclass(frozen=True)
+class BathroomPuzzleState:
+    """Snapshot of the Step 2 bathroom puzzle state used by helper functions."""
+
+    phase: int
+    sink_running: bool
+    soap_applied: bool
+    hands_washed: bool
+
+
+@dataclass(frozen=True)
+class BathroomResponseKeys:
+    """Response keys implied by one Step 2 bathroom puzzle snapshot."""
+
+    sink_key: str
+    status_key: str = ""
+    exit_block_key: str | None = None
+
+
+def _attribute_int(room: Room, key: str, default: int = 0) -> int:
+    """Return one integer-like room attribute, falling back to *default*."""
+    value = room.attributes.get(key, default)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        return int(value)
+    return default
+
+
+def _wash_phase(room: Room) -> int:
+    """Return the current Step 2 wash phase, defaulting to ``0`` if unset."""
+    return _attribute_int(room, "wash_phase")
+
+
+def bathroom_puzzle_state(room: Room, state: GameState) -> BathroomPuzzleState:
+    """Return the current Step 2 state derived from room attributes and flags."""
+    return BathroomPuzzleState(
+        phase=_wash_phase(room),
+        sink_running=bool(room.attributes.get("sink_running", False)),
+        soap_applied=bool(room.attributes.get("soap_applied")),
+        hands_washed=state.has_flag("step2_hands_washed"),
+    )
+
+
+def step2_roll(state: GameState) -> None:
+    """Randomly assign the bathroom mirror direction for Step 2."""
+    roll_turn_direction(state, "step2_mirror_dir")
+
+
+def bathroom_response_keys(room: Room, state: GameState) -> BathroomResponseKeys:
+    """Return the Step 2 response keys implied by one room/state snapshot."""
+    puzzle_state = bathroom_puzzle_state(room, state)
+    if puzzle_state.hands_washed:
+        return BathroomResponseKeys("sink_clean", "clean", None)
+
+    exit_block_key = (
+        "hands_still_soapy" if puzzle_state.phase in (1, 2) else "hands_not_washed"
+    )
+
+    if puzzle_state.sink_running:
+        sink_key = (
+            "sink_running_rinse"
+            if puzzle_state.phase in (0, 2)
+            else "sink_running_stop"
+        )
+        if puzzle_state.phase == 0:
+            status_key = "soapy" if puzzle_state.soap_applied else "soap_needed"
+            return BathroomResponseKeys(sink_key, status_key, exit_block_key)
+        if puzzle_state.phase == 2:
+            return BathroomResponseKeys(sink_key, "water_back", exit_block_key)
+        if puzzle_state.phase == 3:
+            return BathroomResponseKeys(sink_key, "final_rinse", exit_block_key)
+        return BathroomResponseKeys(sink_key, "", exit_block_key)
+
+    status_key = "water_cut" if puzzle_state.phase == 1 else ""
+    return BathroomResponseKeys("sink_off", status_key, exit_block_key)
+
+
+def bathroom_exit_block_message(
+    room: Room,
+    state: GameState,
+    move_responses: Mapping[str, str],
+) -> str | None:
+    """Return an exit-blocking message while bathroom Step 2 is incomplete."""
+    if room.room_id != "bathroom":
+        return None
+    response_keys = bathroom_response_keys(room, state)
+    if response_keys.exit_block_key is None:
+        return None
+    return move_responses[response_keys.exit_block_key]
 
 
 @dataclass(frozen=True)
@@ -46,13 +133,13 @@ class _BathroomActionTransition:
 
 
 BathroomActionFallback = Callable[
-    [Room, _BathroomPuzzleState, Mapping[str, str]],
+    [Room, BathroomPuzzleState, Mapping[str, str]],
     str,
 ]
 """Callable type for one action-specific non-transition Step 2 response."""
 
 BathroomActionGuard = Callable[
-    [Room, _BathroomPuzzleState, Mapping[str, str]],
+    [Room, BathroomPuzzleState, Mapping[str, str]],
     str | None,
 ]
 """Callable type for an optional pre-transition Step 2 action guard."""
@@ -155,7 +242,7 @@ def _apply_action_transition(
 
 
 def _already_clean_response(
-    puzzle_state: _BathroomPuzzleState, responses: Mapping[str, str]
+    puzzle_state: BathroomPuzzleState, responses: Mapping[str, str]
 ) -> str | None:
     """Return an "already clean" message if hands are washed, otherwise ``None``.
 
@@ -179,7 +266,7 @@ def _already_clean_response(
 
 def _action_puzzle_state(
     room: Room, state: GameState, responses: Mapping[str, str]
-) -> tuple[_BathroomPuzzleState, str | None]:
+) -> tuple[BathroomPuzzleState, str | None]:
     """Return the current Step 2 state plus any already-clean short-circuit.
 
     Action handlers for ``SOAP``, ``RINSE``, and ``STOP`` all begin by reading
@@ -197,11 +284,11 @@ def _action_puzzle_state(
 
     Returns
     -------
-    tuple[_BathroomPuzzleState, str or None]
+    tuple[BathroomPuzzleState, str or None]
         The shared puzzle snapshot plus the action-specific clean-hands
         response, if one applies.
     """
-    puzzle_state = _bathroom_puzzle_state(room, state)
+    puzzle_state = bathroom_puzzle_state(room, state)
     return puzzle_state, _already_clean_response(puzzle_state, responses)
 
 
@@ -270,7 +357,7 @@ def _phase1_rinse_response(room: Room, responses: Mapping[str, str]) -> str:
 
 def _rinse_fallback_response(
     room: Room,
-    puzzle_state: _BathroomPuzzleState,
+    puzzle_state: BathroomPuzzleState,
     responses: Mapping[str, str],
 ) -> str:
     """Return the non-transition rinse response for one Step 2 state."""
@@ -281,7 +368,7 @@ def _rinse_fallback_response(
 
 def _rinse_guard_response(
     _room: Room,
-    puzzle_state: _BathroomPuzzleState,
+    puzzle_state: BathroomPuzzleState,
     responses: Mapping[str, str],
 ) -> str | None:
     """Reject Phase 0 rinsing until soap has been applied."""
@@ -292,7 +379,7 @@ def _rinse_guard_response(
 
 def _stop_fallback_response(
     _room: Room,
-    puzzle_state: _BathroomPuzzleState,
+    puzzle_state: BathroomPuzzleState,
     responses: Mapping[str, str],
 ) -> str:
     """Return the non-transition stop-sink response for one Step 2 state."""
@@ -303,7 +390,7 @@ def _stop_fallback_response(
 
 def _soap_fallback_response(
     room: Room,
-    puzzle_state: _BathroomPuzzleState,
+    puzzle_state: BathroomPuzzleState,
     responses: Mapping[str, str],
 ) -> str:
     """Return the soap-dispenser response for one Step 2 state."""
@@ -431,6 +518,12 @@ def bathroom_room_state_commands(
             "bathroom",
             commands["rinse"]["no_location"],
             partial(rinse_hands, rinse_responses=commands["rinse"]),
+        ),
+        (
+            ("dry",),
+            "bathroom",
+            commands["dry"]["no_location"],
+            fixed_room_state_handler(commands["dry"]["missing_handle"]),
         ),
         (
             ("stop",),

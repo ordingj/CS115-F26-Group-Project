@@ -1,12 +1,14 @@
 # puzzle.yaml — narrative text for puzzle clues
 #
 # step1_clue_templates: keyed by clue_type; use {correct} and {opposite} placeholders.
+# step1_readable_targets: alternate player input targets that should reveal each clue type.
+# step2_direction_prefix: prefix used to build the mirrored direction text.
 # step2_mirror_text: use {backwards} (reversed "GO DIRECTION") and {direction} (upper-cased).
 
 step1_clue_templates:
-  # The fluorescent light above the *wrong* hallway flickers — go the other way.
+  # The fluorescent light above the correct hallway flickers.
   light: >-
-    The fluorescent light above the {opposite} hallway flickers and buzzes, throwing that
+    The fluorescent light above the {correct} hallway flickers and buzzes, throwing that
     corridor into a strobing half-dark. Every other direction is steady.
 
   # A bake-sale sign with a hand-drawn arrow points the correct way.
@@ -15,9 +17,18 @@ step1_clue_templates:
     hand-drawn arrow pointing {correct}.
 
   # A fleeting shadow slips around the corner in the correct direction.
+  # This clue only rolls for left/right turns; straight-ahead uses the other clue types.
   shadow: >-
     Out of the corner of your eye you catch a shadow — someone, or something — slipping around
     the corner to your {correct}. By the time you look directly, it's gone.
+
+step1_readable_targets:
+  sign:
+    - flyer
+    - orange flyer
+    - bake sale flyer
+
+step2_direction_prefix: "GO "
 
 step2_mirror_text: >-
   The mirror is fogged from the sinks. You wipe a clear patch. Above the door frame, written in

@@ -10,9 +10,9 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-import main as main_module
+import game.main as main_module
 from game import load_yaml_data
-from game.command import (
+from game.commands.command import (
     Command,
     CommandParser,
     CommandRegistry,
@@ -61,6 +61,7 @@ class CommandRegistryTest(unittest.TestCase):
         state = GameState(current_room_id="lobby")
 
         def handler(verb: str, target: str | None, game_state: GameState) -> str:
+            """Assert that dispatch forwards the parsed command fields unchanged."""
             self.assertEqual((verb, target, game_state), ("look", "mirror", state))
             return "ok"
 
@@ -95,6 +96,7 @@ class CommandRegistryTest(unittest.TestCase):
         seen: list[tuple[str | None, GameState]] = []
 
         def handler(target: str | None, game_state: GameState) -> str:
+            """Capture the adapted target/state pair for the assertion below."""
             seen.append((target, game_state))
             return "ok"
 
@@ -113,6 +115,7 @@ class CommandRegistryTest(unittest.TestCase):
         current_room = Mock(return_value=bathroom)
 
         def handler(room: Room, game_state: GameState) -> str:
+            """Assert that the room-gated adapter forwards the active room and state."""
             self.assertIs(room, bathroom)
             self.assertIs(game_state, state)
             return "washed"
@@ -154,6 +157,7 @@ class CommandRegistryTest(unittest.TestCase):
         seen: list[GameState] = []
 
         def handler(game_state: GameState) -> str:
+            """Capture the forwarded state for the assertion below."""
             seen.append(game_state)
             return "mirror"
 
@@ -171,6 +175,7 @@ class CommandRegistryTest(unittest.TestCase):
         fallback = Mock(return_value="fallback")
 
         def handler(room: Room, game_state: GameState) -> str:
+            """Assert that the room-target adapter passes through the matched room and state."""
             self.assertIs(room, bathroom)
             self.assertIs(game_state, state)
             return "mirror"
@@ -204,6 +209,7 @@ class CommandRegistryTest(unittest.TestCase):
         seen: list[tuple[Room, GameState]] = []
 
         def handler(room: Room, game_state: GameState) -> str:
+            """Capture the room/state pair registered under each room-gated verb."""
             seen.append((room, game_state))
             return "washed"
 
@@ -225,6 +231,7 @@ class CommandRegistryTest(unittest.TestCase):
         fallback = Mock(return_value="fallback")
 
         def handler(room: Room, game_state: GameState) -> str:
+            """Assert that the matching room-target handler receives the live room and state."""
             self.assertIs(room, bathroom)
             self.assertIs(game_state, state)
             return "mirror"
@@ -251,6 +258,7 @@ class CommandRegistryTest(unittest.TestCase):
         seen: list[tuple[str | None, GameState]] = []
 
         def handler(target: str | None, game_state: GameState) -> str:
+            """Capture the adapted target/state values for each registered verb."""
             seen.append((target, game_state))
             return "ok"
 
@@ -266,6 +274,30 @@ class CommandRegistryTest(unittest.TestCase):
 
 class GameStateTest(unittest.TestCase):
     """Verify core session bookkeeping."""
+
+    def test_start_countdown_syncs_remaining_from_live_deadline(self) -> None:
+        """Verify that sync_time updates the countdown from a live deadline."""
+        state = GameState(current_room_id="lobby", time_remaining=45)
+
+        state.start_countdown(now=100.0)
+        changed = state.sync_time(now=110.1)
+
+        self.assertTrue(changed)
+        self.assertEqual(state.time_remaining, 35)
+        self.assertFalse(state.game_over)
+
+    def test_tick_shifts_live_deadline_by_action_cost(self) -> None:
+        """Verify that tick() still applies the action penalty in live mode."""
+        state = GameState(
+            current_room_id="lobby", time_remaining=45, seconds_per_action=15
+        )
+
+        state.start_countdown(now=100.0)
+        state.tick(now=100.0)
+
+        self.assertEqual(state.time_remaining, 30)
+        self.assertEqual(state.move_count, 1)
+        self.assertFalse(state.game_over)
 
     def test_tick_reduces_time_and_tracks_moves(self) -> None:
         """Verify that tick() decrements time_remaining and increments move_count without ending the game."""
@@ -289,6 +321,34 @@ class GameStateTest(unittest.TestCase):
 
         self.assertEqual(state.time_remaining, 0)
         self.assertTrue(state.game_over)
+
+    def test_tick_stops_advancing_after_winning(self) -> None:
+        """Verify that post-win commands do not drain time or moves before exit."""
+        state = GameState(
+            current_room_id="room_314", time_remaining=45, seconds_per_action=15
+        )
+        state.won = True
+
+        state.tick()
+
+        self.assertEqual(state.time_remaining, 45)
+        self.assertEqual(state.move_count, 0)
+        self.assertFalse(state.game_over)
+
+    def test_used_interstitial_room_ids_default_to_an_isolated_empty_set(self) -> None:
+        """Verify that each GameState gets its own interstitial-room history set."""
+        first_state = GameState(current_room_id="lobby")
+        second_state = GameState(current_room_id="lobby")
+
+        first_state.used_interstitial_room_ids.add("flavor_copy_room")
+
+        self.assertEqual(second_state.used_interstitial_room_ids, set())
+
+    def test_replay_requested_defaults_to_false(self) -> None:
+        """Verify that fresh game state does not request a replay by default."""
+        state = GameState(current_room_id="lobby")
+
+        self.assertFalse(state.replay_requested)
 
     def test_flags_and_formatted_time_helpers(self) -> None:
         """Verify set_flag/has_flag round-trip and formatted_time M:SS output."""
@@ -321,16 +381,21 @@ class MainCompositionTest(unittest.TestCase):
         event_queue = object()
         registry = object()
         engine = Mock()
+        engine.state.replay_requested = False
 
         with (
             patch(
                 "argparse.ArgumentParser.parse_args",
                 return_value=SimpleNamespace(no_curses=True),
             ),
-            patch("main.build_world", return_value=rooms),
-            patch("main.load_events", return_value=event_queue),
-            patch("main.build_commands", return_value=registry) as build_commands_mock,
-            patch("main.GameEngine", return_value=engine) as game_engine_mock,
+            patch.object(main_module, "build_world", return_value=rooms),
+            patch.object(main_module, "load_events", return_value=event_queue),
+            patch.object(
+                main_module, "build_commands", return_value=registry
+            ) as build_commands_mock,
+            patch.object(
+                main_module, "GameEngine", return_value=engine
+            ) as game_engine_mock,
         ):
             main_module.main()
 
@@ -351,17 +416,20 @@ class MainCompositionTest(unittest.TestCase):
         event_queue = object()
         registry = object()
         engine = Mock()
+        engine.state.replay_requested = False
 
         with (
             patch(
                 "argparse.ArgumentParser.parse_args",
                 return_value=SimpleNamespace(no_curses=False),
             ),
-            patch("main.build_world", return_value=rooms),
-            patch("main.load_events", return_value=event_queue),
-            patch("main.build_commands", return_value=registry) as build_commands_mock,
+            patch.object(main_module, "build_world", return_value=rooms),
+            patch.object(main_module, "load_events", return_value=event_queue),
+            patch.object(
+                main_module, "build_commands", return_value=registry
+            ) as build_commands_mock,
             patch(
-                "game.curses_engine.CursesEngine", return_value=engine
+                "game.engine.curses_engine.CursesEngine", return_value=engine
             ) as curses_mock,
         ):
             main_module.main()
@@ -374,6 +442,39 @@ class MainCompositionTest(unittest.TestCase):
         self.assertIs(built_events, event_queue)
         self.assertEqual(build_commands_mock.call_args.args[0], [engine])
         engine.run.assert_called_once_with()
+
+    def test_main_rebuilds_plain_engine_when_replay_is_requested(self) -> None:
+        """Verify that main() starts a fresh session when the ending screen requests replay."""
+        rooms = [{"lobby": object()}, {"lobby": object()}]
+        events = [object(), object()]
+        registries = [object(), object()]
+        first_engine = Mock()
+        first_engine.state.replay_requested = True
+        second_engine = Mock()
+        second_engine.state.replay_requested = False
+
+        with (
+            patch(
+                "argparse.ArgumentParser.parse_args",
+                return_value=SimpleNamespace(no_curses=True),
+            ),
+            patch.object(main_module, "build_world", side_effect=rooms),
+            patch.object(main_module, "load_events", side_effect=events),
+            patch.object(
+                main_module, "build_commands", side_effect=registries
+            ) as build_commands_mock,
+            patch.object(
+                main_module,
+                "GameEngine",
+                side_effect=[first_engine, second_engine],
+            ) as game_engine_mock,
+        ):
+            main_module.main()
+
+        self.assertEqual(game_engine_mock.call_count, 2)
+        self.assertEqual(build_commands_mock.call_count, 2)
+        first_engine.run.assert_called_once_with()
+        second_engine.run.assert_called_once_with()
 
 
 if __name__ == "__main__":

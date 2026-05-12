@@ -10,6 +10,8 @@ responses:
   move:
     no_exit: "You can't go that way."
     blocked: "That way is blocked."
+    engine_not_initialised: "Error: engine not initialised."
+    room_missing: "You are nowhere."
     lobby_forward_blocked:
       "There isn't anyone around, but the hallway is thoroughly blocked off."
     lobby_back_blocked: "You can't run from your problems, you need to take your final."
@@ -55,6 +57,10 @@ responses:
     applied: >-
       You pump soap from the dispenser onto your hands. They lather up. (Try: RINSE HANDS)
 
+  dry:
+    no_location: "There's nothing to dry here."
+    missing_handle: "The paper towel dispenser's handle is missing."
+
   rinse:
     no_location: "There's nothing to rinse here."
     no_soap: "You should use soap first. (Try: SOAP HANDS)"
@@ -67,14 +73,13 @@ responses:
       You put your hands back under quickly. This time the water stays running long enough to
       rinse the soap off. Your hands are clean. Type 'stop' to take your hands away.
     phase_1_wrong: >-
-      The water is off. Pull your hands back first \u2014 try 'stop' to let the motion sensor
-      reset.
+      The water is off. Pull your hands back first - try 'stop' to let the motion sensor reset.
     phase_1_wrong_2: >-
       The water is still off. The sensor won't re-trigger until the basin is empty. Try 'stop'
       to pull your hands away, then rinse again.
     phase_1_wrong_3: >-
-      Tip: the sequence is RINSE \u2192 STOP \u2192 RINSE \u2192 STOP. The water cut off after
-      your first rinse \u2014 type 'stop' now.
+      Tip: the sequence is RINSE -> STOP -> RINSE -> STOP. The water cut off after your first
+      rinse - type 'stop' now.
     phase_done: "Your hands are already rinsed. Type 'stop' to finish."
 
   stop:
@@ -82,7 +87,7 @@ responses:
     already_clean: "The sink is already off. Your hands are clean."
     phase_1: >-
       You pull your hands back. A moment passes... the sensor detects the empty basin and the
-      water comes back on. Quick \u2014 rinse hands again.
+      water comes back on. Quick - rinse hands again.
     phase_3: >-
       You take your hands away. The water shuts off. Your hands are clean. The steam on the
       mirror has cleared a little. You should look at it.
@@ -125,24 +130,25 @@ responses:
       - "SOAP HANDS                     — Apply soap from the dispenser."
       - "RINSE HANDS / WASH HANDS       — Rinse your hands under the sink."
       - "STOP                           — Pull your hands back from the sink."
+      - "DRY [HANDS]                    — Try to use the paper towel dispenser."
       - "OPEN [item]                    — Try to open a door or object."
       - "KNOCK [item]                   — Knock on a door or object."
       - "CHECK WATCH                    — See how much time you have left."
       - "INVENTORY / I                  — List items you are carrying."
       - "HELP                           — Show this message."
-      - "QUIT                           — Give up and exit."
+      - "QUIT / EXIT                    — Give up and exit."
 
   bathroom_status:
     clean: "The sink is off. Your hands are clean."
     soap_needed: >-
       The motion-sensor sink is running. Try the soap dispenser first. (Try: SOAP HANDS)
     soapy: >-
-      The motion-sensor sink is running. Your hands are soapy \u2014 rinse them off. (Try:
-      RINSE HANDS)
+      The motion-sensor sink is running. Your hands are soapy - rinse them off. (Try: RINSE
+      HANDS)
     water_cut: >-
       The water cut off. Your hands are still soapy. (Try: STOP to pull your hands back)
     water_back: >-
-      The water came back on. Quick \u2014 rinse again before it cuts off. (Try: RINSE HANDS)
+      The water came back on. Quick - rinse again before it cuts off. (Try: RINSE HANDS)
     final_rinse: "The water is still running. Your hands are clean. (Try: STOP)"
 
   ambient:
@@ -173,9 +179,15 @@ responses:
     panel_room: "LOCATION"
     panel_log: "ACTIVITY"
     section_details: "DETAILS"
-    section_clue: "CLUE"
     section_exits: "EXITS"
     section_items: "YOU NOTICE"
+    plain_exits_prefix: "Exits: "
+    plain_items_prefix: "You see: "
+    plain_time_prefix: "Time remaining: "
+
+  cli:
+    description: "Final Exam: Room 314 – a text adventure"
+    no_curses_help: "Run in plain-text mode (no curses UI)"
 
   end:
     won_early: |-
@@ -189,4 +201,4 @@ responses:
       TIME'S UP.
       You hear the distant sound of exam papers being collected.
       Game over.
-    press_any_key: "Press any key to exit."
+    press_enter_to_replay: "(Press Enter to replay, or anything else to exit)"

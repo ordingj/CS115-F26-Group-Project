@@ -11,11 +11,11 @@ from __future__ import annotations
 from typing import TypeVar, cast
 from unittest.mock import Mock
 
-from game.command import Command
-from game.curses_engine import CursesEngine
-from game.engine import GameEngine
+from game.commands.command import Command
+from game.engine.curses_engine import CursesEngine
+from game.engine.engine import GameEngine
 from game.event import EventQueue
-from game.player_commands import build_commands
+from game.commands.player_commands import build_commands
 from game.room import Room
 from game.state import GameState
 from game.world import build_world

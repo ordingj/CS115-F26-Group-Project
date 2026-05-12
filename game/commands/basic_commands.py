@@ -9,10 +9,11 @@ from __future__ import annotations
 from typing import Any
 
 from game import format_indented_lines
-from game.command import (
+from game.commands.command import (
     CommandRegistry,
     register_target_state_command_specs,
     TargetStateCommandSpec,
+    TargetStateHandler,
 )
 from game.state import GameState
 
@@ -21,7 +22,7 @@ def register_basic_commands(registry: CommandRegistry, cmd: dict[str, Any]) -> N
     """Register simple stateless and inventory commands with *registry*.
 
     Covers ``check``, ``open``, ``knock``, ``inventory`` (alias ``i``),
-    ``drop``, ``help``, and ``quit``.
+    ``drop``, ``help``, and ``quit`` (alias ``exit``).
 
     Parameters
     ----------
@@ -31,6 +32,19 @@ def register_basic_commands(registry: CommandRegistry, cmd: dict[str, Any]) -> N
         Top-level ``responses`` mapping loaded from ``data/commands.yaml``.
     """
 
+    def make_target_required_handler(
+        command_key: str, response_key: str
+    ) -> TargetStateHandler:
+        """Return one handler that requires a target before formatting a response."""
+
+        def handle_target_required(target: str | None, _state: GameState) -> str:
+            """Return the no-target prompt or the formatted target response."""
+            if target is None:
+                return cmd[command_key]["no_target"]
+            return cmd[command_key][response_key].format(target=target)
+
+        return handle_target_required
+
     def handle_check(target: str | None, state: GameState) -> str:
         """Report time remaining, or deflect if a non-watch/time target is given."""
         if target in (None, "watch", "time"):
@@ -39,17 +53,8 @@ def register_basic_commands(registry: CommandRegistry, cmd: dict[str, Any]) -> N
             return cmd["check"]["phone"]
         return cmd["check"]["other"].format(target=target)
 
-    def handle_open(target: str | None, _state: GameState) -> str:
-        """Require an object name, then report that it cannot be opened."""
-        if target is None:
-            return cmd["open"]["no_target"]
-        return cmd["open"]["blocked"].format(target=target)
-
-    def handle_knock(target: str | None, _state: GameState) -> str:
-        """Require an object name, then report that nobody answers."""
-        if target is None:
-            return cmd["knock"]["no_target"]
-        return cmd["knock"]["no_answer"].format(target=target)
+    handle_open = make_target_required_handler("open", "blocked")
+    handle_knock = make_target_required_handler("knock", "no_answer")
 
     def handle_inventory(_target: str | None, state: GameState) -> str:
         """List the items the player is currently carrying."""
@@ -83,7 +88,7 @@ def register_basic_commands(registry: CommandRegistry, cmd: dict[str, Any]) -> N
         (("inventory", "i"), handle_inventory),
         (("drop",), handle_drop),
         (("help",), handle_help),
-        (("quit",), handle_quit),
+        (("quit", "exit"), handle_quit),
     )
 
     register_target_state_command_specs(registry, command_specs)
