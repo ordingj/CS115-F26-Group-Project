@@ -3,7 +3,7 @@
 All game verbs are registered here. Puzzle-specific verbs (RINSE, STOP,
 SOAP, LISTEN, LOOK at targets, READ) still capture ``engine_ref`` to reach
 the live engine at call time without a circular import, but the room-aware
-registry adapters now live in :mod:`game.command` instead of this module,
+registry adapters now live in :mod:`game.commands.command` instead of this module,
 and the bathroom/janitor-specific command spec fragments live with their
 owning modules.
 """
@@ -59,12 +59,12 @@ def build_commands(engine_ref: list[GameEngine | None]) -> CommandRegistry:
     ----------
     engine_ref : list[GameEngine or None]
         A ``[None]`` list; ``engine_ref[0]`` will be the live
-        :class:`~game.engine.GameEngine` by the time any handler is invoked.
+        :class:`~game.engine.engine.GameEngine` by the time any handler is invoked.
 
     Returns
     -------
     CommandRegistry
-        A :class:`~game.command.CommandRegistry` with every verb registered.
+        A :class:`~game.commands.command.CommandRegistry` with every verb registered.
     """
     registry = CommandRegistry(_CMD["unknown"])
 

@@ -1,8 +1,8 @@
 """Unit tests for bathroom, intersection, janitor, and puzzle-domain helpers.
 
 Tests the public helper surfaces from :mod:`game.puzzles.bathroom`,
-:mod:`game.intersection`, :mod:`game.janitor`, and :mod:`game.puzzle` in
-isolation using a fresh world and state.
+:mod:`game.puzzles.intersection`, :mod:`game.puzzles.janitor`, and
+:mod:`game.puzzles.puzzle` in isolation using a fresh world and state.
 """
 
 from __future__ import annotations
@@ -412,7 +412,7 @@ class PuzzleHelpersTest(unittest.TestCase):
                 side_effect=seed_step3_direction,
             ),
             patch(
-                "game.janitor.random.choice",
+                "game.puzzles.janitor.random.choice",
                 return_value=("Turn Left Anthem", "Step to the left"),
             ),
         ):

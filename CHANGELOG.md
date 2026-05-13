@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-05-13
+
+- Feature — add single-letter movement shortcuts `f`, `b`, `l`, and `r` by canonicalizing them
+  in the command parser, advertise the shortcuts in help/docs, and cover the runtime parser
+  path with focused core, command-flow, and puzzle-flow tests.
+
+- Docs — close the last gap in the repo-wide Python docstring pass by documenting the private
+  polling helper in `tests/test_curses_helpers.py`, then revalidate the pass with a saved-file
+  AST audit and focused curses-helper coverage.
+
+- Docs — audit the runtime Python modules for hardcoded player-facing strings and confirm the
+  shipped narrative, labels, and command copy remain YAML-backed, advancing the active TODO
+  item to the remaining YAML-organization pass.
+
+- Docs — bring `data/songs.yaml` in line with the other data files by adding section comments
+  for the left/right janitor clue pools and documenting the grouping rule that keeps manual
+  content audits straightforward.
+
+- Refactor — remove the dead legacy top-level `game/engine.py` and `game/janitor.py` modules,
+  update the remaining test/doc references to the nested package paths, and keep the active
+  code-quality audit aligned with the current package layout.
+
 ## 2026-05-12
 
 - Docs — add `tests/TESTS.md` as the canonical test-running guide, including the suite map,

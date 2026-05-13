@@ -1,8 +1,13 @@
 # Janitor song pool for puzzle Step 3/4.
 # Each entry has a title and a chorus line containing the direction word.
 # direction: "left" | "right"
+# Keep the list grouped by direction so manual audits can quickly confirm
+# that each clue pool still has balanced coverage after edits.
 
 songs:
+  # Left-answer clue pool.
+  # These entries should keep the direction word obvious enough that the
+  # janitor hint still works when only part of the chorus is revealed.
   - direction: left
     title: "I Left My Heart in San Francisco"
     chorus: |
@@ -87,6 +92,9 @@ songs:
       And send me safely back again
       To the girl I left behind me
 
+  # Right-answer clue pool.
+  # Keep these entries contiguous with the same title/chorus structure as the
+  # left pool so the file stays easy to scan and update by hand.
   - direction: right
     title: "Right Round"
     chorus: |

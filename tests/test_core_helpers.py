@@ -1,7 +1,8 @@
 """Unit tests for command, state, and shared data helpers.
 
-Covers :class:`~game.command.CommandParser`, :class:`~game.command.CommandRegistry`,
-:class:`~game.state.GameState`, and :func:`~game.load_yaml_data`.
+Covers :class:`~game.commands.command.CommandParser`,
+:class:`~game.commands.command.CommandRegistry`, :class:`~game.state.GameState`,
+and :func:`~game.load_yaml_data`.
 """
 
 from __future__ import annotations
@@ -50,6 +51,29 @@ class CommandParserTest(unittest.TestCase):
         command = parser.parse("   ")
 
         self.assertEqual(command, Command(verb="", target=None))
+
+    def test_parse_canonicalises_single_letter_movement_aliases(self) -> None:
+        """Verify that one-letter direction shortcuts map to the canonical movement verbs."""
+        parser = CommandParser()
+
+        expected_commands = {
+            "f": Command(verb="forward"),
+            "b": Command(verb="back"),
+            "l": Command(verb="left"),
+            "r": Command(verb="right"),
+        }
+
+        for raw, expected in expected_commands.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(parser.parse(raw), expected)
+
+    def test_parse_go_accepts_single_letter_direction_aliases(self) -> None:
+        """Verify that GO plus a one-letter direction shortcut still becomes a move command."""
+        parser = CommandParser()
+
+        command = parser.parse("go r")
+
+        self.assertEqual(command, Command(verb="right", target=None))
 
 
 class CommandRegistryTest(unittest.TestCase):

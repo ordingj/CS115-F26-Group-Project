@@ -44,7 +44,7 @@ class CursesEngine(GameEngine):
 
     The terminal is divided (top to bottom) into a 1-line header, a room
     panel, a scrolling log panel, and a 1-line input bar.  All game logic
-    lives in the parent :class:`~game.engine.GameEngine`; this class only
+    lives in the parent :class:`~game.engine.engine.GameEngine`; this class only
     overrides the I/O methods.
     """
 
@@ -99,7 +99,7 @@ class CursesEngine(GameEngine):
         """Main game loop executed inside the curses wrapper.
 
         Called by :meth:`run` via :func:`curses.wrapper`.  Mirrors the
-        parent's :meth:`~game.engine.GameEngine.run` loop but routes all
+        parent's :meth:`~game.engine.engine.GameEngine.run` loop but routes all
         output through the curses panel helpers instead of ``print``.
 
         Parameters

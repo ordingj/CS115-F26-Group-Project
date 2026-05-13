@@ -626,6 +626,7 @@ class CursesEngineMethodTest(unittest.TestCase):
         sync_results = [False, True]
 
         def _sync_time() -> bool:
+            """Drive two polling iterations so the second one ends the session."""
             changed = sync_results.pop(0)
             if changed:
                 engine.state.time_remaining = 0

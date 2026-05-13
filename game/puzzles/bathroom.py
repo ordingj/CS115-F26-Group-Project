@@ -11,7 +11,7 @@ phases stored in ``room.attributes["wash_phase"]``:
 - **Phase 3**: Rinsed; player must stop the running sink.
 - **Phase 4**: Hands washed — ``step2_hands_washed`` flag is set.
 
-Read-only Step 2 presentation helpers in :mod:`game.bathroom_view` reuse the
+Read-only Step 2 presentation helpers in :mod:`game.puzzles.bathroom_view` reuse the
 shared puzzle snapshot defined here so both modules read the same source of
 truth for sink, soap, and completion state.
 """

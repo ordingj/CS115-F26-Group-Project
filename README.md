@@ -125,7 +125,7 @@ STORY.md               # Narrative design notes and early puzzle planning
 
 ## Commands
 
-- Movement: `forward`, `back`, `left`, `right`
+- Movement: `forward` or `f`, `back` or `b`, `left` or `l`, `right` or `r`
 - Observation: `look [item]`, `examine [item]`, `read [item]`, `listen`, `check watch`
 - Interaction: `open [item]`, `knock [item]`, `soap hands`, `rinse hands`, `wash hands`,
   `dry hands`, `stop`

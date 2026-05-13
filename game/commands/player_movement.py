@@ -401,7 +401,7 @@ def register_movement_commands(
         and ``right`` verbs.
     engine_ref : list[GameEngine or None]
         Mutable cell holding the live engine (same pattern as
-        :func:`~game.player_commands.build_commands`).
+        :func:`~game.commands.player_commands.build_commands`).
     move_responses : Mapping[str, str]
         Movement response strings from ``commands.yaml``.
     """

@@ -20,6 +20,18 @@ if TYPE_CHECKING:
 # ── canonical verb sets ───────────────────────────────────────────────────────
 
 MOVEMENT_VERBS: frozenset[str] = frozenset({"forward", "back", "left", "right"})
+MOVEMENT_ALIASES: dict[str, str] = {
+    "f": "forward",
+    "b": "back",
+    "l": "left",
+    "r": "right",
+}
+
+
+def _canonicalize_movement_token(token: str) -> str:
+    """Return the canonical movement verb for one direction token."""
+    return MOVEMENT_ALIASES.get(token, token)
+
 
 # Handler: (verb, target, state) -> message string shown to the player.
 CommandHandler = Callable[[str, "str | None", "GameState"], str]
@@ -65,7 +77,9 @@ class CommandParser:
         """Tokenise *raw* input and return a :class:`Command`.
 
         The first token becomes the verb (lower-cased); any remaining tokens
-        are joined with spaces to form the target.  An empty or
+        are joined with spaces to form the target. Single-letter movement
+        shortcuts are normalised to the canonical direction verbs, and
+        ``go <direction>`` accepts the same shortcuts. An empty or
         whitespace-only string produces ``Command(verb="")``.
 
         Parameters
@@ -85,14 +99,16 @@ class CommandParser:
             # Empty input — return a no-op command so the caller can skip it
             # without a special-case check.
             return Command(verb="")
-        verb = tokens[0]
+        verb = _canonicalize_movement_token(tokens[0])
         # Collapse all remaining tokens into one target string (e.g.
         # "read detour sign" → target="detour sign").
         target = " ".join(tokens[1:]) if len(tokens) > 1 else None
         # "go <direction>" is a common natural-language form.  Re-map it so
         # downstream handlers only need to handle bare direction verbs.
-        if verb == "go" and target in MOVEMENT_VERBS:
-            return Command(verb=target)
+        if verb == "go" and target is not None:
+            movement_target = _canonicalize_movement_token(target)
+            if movement_target in MOVEMENT_VERBS:
+                return Command(verb=movement_target)
         return Command(verb=verb, target=target)
 
 

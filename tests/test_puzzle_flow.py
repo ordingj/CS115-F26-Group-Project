@@ -120,6 +120,30 @@ class MovementAndPuzzleFlowTest(unittest.TestCase):
         )
         describe_mock(engine).assert_called_once()
 
+    def test_single_letter_movement_alias_dispatches_through_runtime_parser(
+        self,
+    ) -> None:
+        """Verify that one-letter movement shortcuts reach the normal movement pipeline."""
+        engine = make_engine()
+
+        with (
+            patch("game.commands.player_movement.random.randint", return_value=2),
+            patch(
+                "game.commands.player_movement.random.sample",
+                return_value=["flavor_copy_room", "flavor_stairwell"],
+            ),
+        ):
+            command = engine.parser.parse("l")
+            result = engine.registry.dispatch(command, engine.state)
+
+        hallway = engine.rooms["hallway_approach"]
+        self.assertEqual(command.verb, "left")
+        self.assertEqual(result, "")
+        self.assertEqual(engine.state.current_room_id, "hallway_approach")
+        self.assertEqual(hallway.exits["forward"], "flavor_copy_room")
+        self.assertEqual(hallway.exits["back"], "flavor_copy_room")
+        describe_mock(engine).assert_called_once()
+
     def test_flavor_detour_rooms_accept_back_as_another_step_toward_intersection(
         self,
     ) -> None:

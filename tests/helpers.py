@@ -1,9 +1,10 @@
 """Shared test builders for Final Exam: Room 314.
 
-Provides factory helpers that wire up a full :class:`~game.engine.GameEngine`
-(or :class:`~game.curses_engine.CursesEngine`) with world, state, and command
-registry in one call, plus a few shared room-specific fixtures used by the
-helper-focused test modules.
+Provides factory helpers that wire up a full
+:class:`~game.engine.engine.GameEngine` (or
+:class:`~game.engine.curses_engine.CursesEngine`) with world, state, and
+command registry in one call, plus a few shared room-specific fixtures used
+by the helper-focused test modules.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from game.state import GameState
 from game.world import build_world
 
 EngineT = TypeVar("EngineT", bound=GameEngine)
-"""Generic type variable for :class:`~game.engine.GameEngine` subclasses."""
+"""Generic type variable for :class:`~game.engine.engine.GameEngine` subclasses."""
 
 
 def _build_engine(
@@ -32,8 +33,8 @@ def _build_engine(
     Parameters
     ----------
     engine_type : type[EngineT]
-        :class:`~game.engine.GameEngine` or a subclass such as
-        :class:`~game.curses_engine.CursesEngine`.
+        :class:`~game.engine.engine.GameEngine` or a subclass such as
+        :class:`~game.engine.curses_engine.CursesEngine`.
     start_room : str, optional
         ``room_id`` to start the player in.
     time_remaining : int, optional
@@ -56,7 +57,7 @@ def _build_engine(
 def make_engine(
     start_room: str = "lobby", *, time_remaining: int = 600, mock_describe: bool = True
 ) -> GameEngine:
-    """Build a plain :class:`~game.engine.GameEngine` for tests.
+    """Build a plain :class:`~game.engine.engine.GameEngine` for tests.
 
     Parameters
     ----------
@@ -86,7 +87,7 @@ def make_engine(
 
 
 def make_curses_engine(start_room: str = "lobby") -> CursesEngine:
-    """Build a :class:`~game.curses_engine.CursesEngine` without starting curses.
+    """Build a :class:`~game.engine.curses_engine.CursesEngine` without starting curses.
 
     Parameters
     ----------

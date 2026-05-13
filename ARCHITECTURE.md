@@ -72,7 +72,8 @@ then selects either the default curses UI or the plain-text engine.
   adapters for simple `(target, state)` handlers, room-aware command handlers, plus
   fixed-response and state-only room-target helpers used by declarative command specs,
   including shared batch registration helpers for simple, room-target, and room-gated command
-  families.
+  families. The parser canonicalizes `go <direction>` plus the single-letter movement shortcuts
+  `f`, `b`, `l`, and `r` before dispatch.
 - `game/state.py`: mutable game session state, randomized-detour history, and clock
   bookkeeping.
 - `game/room.py`: room dataclass and deep-clone helper for fresh sessions.

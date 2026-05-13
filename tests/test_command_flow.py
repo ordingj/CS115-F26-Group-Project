@@ -60,7 +60,10 @@ class CommandCoverageTest(unittest.TestCase):
         self.assertEqual(
             dispatch(engine, "check", "watch"), "Your watch reads 10:00 remaining."
         )
-        self.assertIn("Available commands:", dispatch(engine, "help"))
+        help_text = dispatch(engine, "help")
+        self.assertIn("Available commands:", help_text)
+        self.assertIn("FORWARD / F", help_text)
+        self.assertIn("RIGHT / R", help_text)
 
         result = dispatch(engine, "quit")
 

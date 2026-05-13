@@ -5,8 +5,8 @@ utilities reused by the intersection, bathroom, and janitor puzzle domains.
 All randomised results are stored in ``GameState`` so the event system and
 command handlers can read them without re-rolling.
 
-Step-specific clue ownership now lives in :mod:`game.intersection`,
-:mod:`game.bathroom`, and :mod:`game.janitor`.
+Step-specific clue ownership now lives in :mod:`game.puzzles.intersection`,
+:mod:`game.puzzles.bathroom`, and :mod:`game.puzzles.janitor`.
 """
 
 from __future__ import annotations

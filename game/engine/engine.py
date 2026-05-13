@@ -1,9 +1,9 @@
 """GameEngine – main game loop and room rendering for the plain-text UI.
 
 This module provides :class:`GameEngine`, the primary game driver used when
-curses is unavailable or the ``--no-curses`` flag is passed.  The curses
-variaint (:class:`~game.curses_engine.CursesEngine`) inherits from it and
-overrides only the presentation methods, keeping game-loop logic DRY.
+curses is unavailable or the ``--no-curses`` flag is passed. The curses
+variant (:class:`~game.engine.curses_engine.CursesEngine`) inherits from it
+and overrides only the presentation methods, keeping game-loop logic DRY.
 """
 
 from __future__ import annotations
@@ -61,8 +61,8 @@ class GameEngine:
 
     This is the plain-text (``print``/``input``) variant of the engine.
     All game logic (state mutation, event firing, command dispatching) lives
-    here; :class:`~game.curses_engine.CursesEngine` inherits and overrides
-    only the I/O methods so logic stays in a single place.
+    here; :class:`~game.engine.curses_engine.CursesEngine` inherits and
+    overrides only the I/O methods so logic stays in a single place.
     """
 
     def __init__(
@@ -82,7 +82,8 @@ class GameEngine:
         state : GameState
             Mutable game state for this session.
         registry : CommandRegistry
-            Command registry populated by :func:`~game.player_commands.build_commands`.
+            Command registry populated by
+            :func:`~game.commands.player_commands.build_commands`.
         event_queue : EventQueue
             Ambient event queue built by :func:`~game.event.load_events`.
         """
@@ -120,8 +121,8 @@ class GameEngine:
         """Arm a visual room-transition effect before the next room description.
 
         The base (plain-text) implementation is a no-op.  Subclasses
-        (e.g. :class:`~game.curses_engine.CursesEngine`) override this to
-        trigger effects such as a fade-to-black between rooms.
+        (e.g. :class:`~game.engine.curses_engine.CursesEngine`) override this
+        to trigger effects such as a fade-to-black between rooms.
         """
 
     def should_render_arrival_room(self) -> bool:

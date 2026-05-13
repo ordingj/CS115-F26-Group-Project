@@ -3,7 +3,7 @@
 This module owns the non-mutating presentation layer of the handwashing
 puzzle: sink inspection text, ambient bathroom status, and mirror clue
 visibility. It derives those responses from the shared Step 2 bathroom
-state helpers owned by :mod:`game.bathroom`.
+state helpers owned by :mod:`game.puzzles.bathroom`.
 """
 
 from __future__ import annotations

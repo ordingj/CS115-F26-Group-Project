@@ -1,9 +1,9 @@
 """Shared formatting and panel-rendering helpers for the curses UI.
 
-This module is imported by both :class:`~game.curses_engine.CursesEngine` and
-its test helpers.  All curses colour-pair IDs are defined here so they stay
-centralised and can be referenced symbolically (e.g. ``COLOR_EVENT``) instead
-of by magic number.
+This module is imported by both
+:class:`~game.engine.curses_engine.CursesEngine` and its test helpers. All
+curses colour-pair IDs are defined here so they stay centralised and can be
+referenced symbolically (e.g. ``COLOR_EVENT``) instead of by magic number.
 """
 
 from __future__ import annotations

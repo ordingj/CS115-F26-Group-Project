@@ -1,8 +1,15 @@
 .github
-.envrc
+.env*
 .venv
 __pycache__/
 *.pyc
 *.pyo
 node_modules/
 package-lock.json
+.coverage
+.prettier*
+ruff.toml
+.ruff*
+.artifacts/
+.mypy*
+.vscode/

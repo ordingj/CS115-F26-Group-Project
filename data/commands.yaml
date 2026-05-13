@@ -122,7 +122,7 @@ responses:
   help:
     header: "Available commands:"
     entries:
-      - "FORWARD / BACK / LEFT / RIGHT  — Move in that direction."
+      - "FORWARD / F / BACK / B / LEFT / L / RIGHT / R  — Move in that direction."
       - "LOOK [item]                    — Describe the room, or examine an item."
       - "EXAMINE [item]                 — Same as LOOK."
       - "READ [item]                    — Read something (sign, mirror, etc.)."
