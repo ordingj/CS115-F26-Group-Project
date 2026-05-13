@@ -13,3 +13,4 @@ ruff.toml
 .artifacts/
 .mypy*
 .vscode/
+.DS_Store
