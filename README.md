@@ -1,8 +1,8 @@
-# CS115 S26 Group Project - **Final Exam: Room 314**
+# CS115 S26 Final Project - **Final Exam: Room 314**
 
-Group Members: Joseph Ording
+Contributors: Joseph Ording, ChatGPT 5.4, Claude Sonnet 4.6
 
-## Game overview
+## Game Overview
 
 Final Exam: Room 314 is a timed text adventure about finding the right classroom before the
 exam starts. Every command costs time, the hallway layout changes around you, and the correct
